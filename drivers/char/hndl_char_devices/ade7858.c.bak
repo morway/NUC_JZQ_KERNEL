@@ -1,0 +1,491 @@
+/*
+ * ADE7858/58/68/78 Polyphase Multifunction Energy Metering IC Driver
+ *
+ * Copyright 2010 Analog Devices Inc.
+ *
+ * Licensed under the GPL-2 or later.
+ */
+//#include <math.h>
+#include <linux/interrupt.h>
+#include <linux/irq.h>
+#include <asm/gpio.h>
+#include <linux/delay.h>
+#include <linux/mutex.h>
+#include <linux/device.h>
+#include <linux/kernel.h>
+#include <linux/slab.h>
+#include <linux/sysfs.h>
+#include <linux/list.h>
+#include <linux/init.h>
+#include <linux/module.h>
+#include <linux/fs.h>
+#include <asm/uaccess.h>
+#include "ade7858.h"
+
+struct ade7858_state *ade7858_dev=NULL;
+struct hsdc	*p_hsdc=NULL;
+static int ade7858_reset(struct device *dev)
+{
+	struct ade7858_state *st = dev_get_drvdata(dev);
+
+	int ret;
+	u16 val;
+	//at91_set_gpio_output(AT91_PIN_PB16,0);
+	at91_set_gpio_output(AT91_PIN_PC10,0);
+	//printk("ade7858 reset\n");
+	mdelay(500);
+	//at91_set_gpio_output(AT91_PIN_PB16,1);
+	at91_set_gpio_output(AT91_PIN_PC10,1);
+	st->read_reg_16(dev, ADE7858_CONFIG, &val);
+	val |= 1 << 7; /* Software Chip Reset */
+	ret = st->write_reg_16(dev, ADE7858_CONFIG, val);
+
+	return ret;
+}
+
+
+static int ade7858_set_irq(struct device *dev, bool enable)
+{
+	struct ade7858_state *st = dev_get_drvdata(dev);
+
+	int ret;
+	u32 irqen;
+
+	ret = st->read_reg_32(dev, ADE7858_MASK0, &irqen);
+	if (ret!=4)
+	 {
+	 	  printk("ade7858_set_irq : read_reg_32 fail!\n");
+		  goto error_ret;
+	 }
+
+	if (enable)
+		irqen |= 1 << 17; /* 1: interrupt enabled when all periodical
+				     (at 8 kHz rate) DSP computations finish. */
+	else
+		irqen &= ~(1 << 17);
+
+	ret = st->write_reg_32(dev, ADE7858_MASK0, irqen);
+
+error_ret:
+	return ret;
+}
+
+static int ade7858_initial_setup(struct ade7858_state *st)
+{
+	int ret;
+	struct device *dev = st->dev;
+
+	u8  val2 = 0;
+	ade7858_reset(dev);
+	msleep(ADE7858_STARTUP_DELAY);
+	/* Disable IRQ */
+	ret = ade7858_set_irq(dev, false);
+	if (ret!=6) {
+		printk("ret = %d\n",ret);
+		dev_err(dev, "disable irq failed");
+		goto err_ret;
+	}
+
+	st->write_reg_8(dev,ADE7858_CONFIG2,2); //i2c通信
+	st->write_reg_16(dev,ADE7858_GAIN,0); //电流电压增益1
+	st->write_reg_16(dev,ADE7858_CFMODE,0x0808);
+	st->write_reg_16(dev,ADE7858_CF1DEN,0x1);
+	st->write_reg_16(dev,ADE7858_CF2DEN,0x1);
+	//st->write_reg_16(dev,ADE7858_COMPMODE,0x03FF);//电压和电压之间角度
+	st->write_reg_8(dev,ADE7858_MMODE,0);
+	st->write_reg_8(dev,ADE7858_ACCMODE,0);
+	st->write_reg_8(dev,ADE7858_LCYCMODE,0x78);
+	st->write_reg_32(dev,ADE7858_HPFDIS,0);
+	st->write_reg_32(dev,ADE7858_WTHR1,0xffffff);
+	st->write_reg_32(dev,ADE7858_WTHR0,0xffffff);
+	st->write_reg_32(dev,ADE7858_VARTHR1,0xffffff);
+	st->write_reg_32(dev,ADE7858_VARTHR0,0xffffff);
+	st->write_reg_32(dev,ADE7858_VATHR1,0xffffff);
+	st->write_reg_32(dev,ADE7858_VATHR0,0xffffff);
+	
+	st->write_reg_32(dev,ADE7858_VANOLOAD,1);
+	st->write_reg_32(dev,ADE7858_APNOLOAD,1);
+	st->write_reg_32(dev,ADE7858_VARNOLOAD,1);
+	st->write_reg_8(dev,0xe7fe,0xad); 
+	st->write_reg_8(dev,0xe7e2,0x1); 
+	st->write_reg_8(dev,0xe7fe,0x0); 
+	
+	val2 |= 0; /*4M*/
+        val2 |= 1<<1; /*8bit*/
+        val2 |= 1<<3; /*7 reg*/
+        ade7858_dev->write_reg_8(ade7858_dev->dev,ADE7858_HSDC_CFG,val2);
+//	st->write_reg_16(dev,ADE7858_RUN,1);	
+err_ret:
+	return ret;
+}
+
+
+int ade7858_probe(struct ade7858_state *st, struct device *dev)
+{
+	int ret ;
+
+	/* Allocate the comms buffers */
+	st->rx = kzalloc(sizeof(*st->rx)*ADE7858_MAX_RX, GFP_KERNEL);
+	if (st->rx == NULL) {
+		ret = -ENOMEM;
+		goto error_free_st;
+	}
+	st->tx = kzalloc(sizeof(*st->tx)*ADE7858_MAX_TX, GFP_KERNEL);
+	if (st->tx == NULL) {
+		ret = -ENOMEM;
+		goto error_free_rx;
+	}
+	mutex_init(&st->buf_lock);
+	/* setup the industrialio driver allocated elements */
+
+	st->dev = dev;
+	dev_set_drvdata(dev,st);
+	ade7858_dev = st;
+	ade7858_dev->hsdc = p_hsdc;
+	/* Get the device into a sane initial state */
+	ret = ade7858_initial_setup(st);
+	return 0;
+
+error_free_rx:
+	kfree(st->rx);
+error_free_st:
+	kfree(st);
+	return ret;
+
+}
+EXPORT_SYMBOL(ade7858_probe);
+int ade7858_hsdcreg(struct hsdc *hsdc)
+{
+	p_hsdc = hsdc;
+/*	if(ade7858_dev)
+	{
+		ade7858_dev->hsdc = hsdc;
+		return 0;
+	}
+	printk("ade7858_dev is null\n");
+	return -1;*/
+	return 0;
+}
+EXPORT_SYMBOL(ade7858_hsdcreg);
+
+static ssize_t ade7858_adj(char *buf)
+{
+	int i;
+	u32 *pbuf = (u32*) buf;
+	u32 val;
+	/* 电流电压增益 */
+	for(i=0;i<6;++i)
+	{
+		val = pbuf[i];
+		ade7858_dev->write_reg_32(ade7858_dev->dev,ADE7858_AIGAIN+i,val);	
+	}
+	/* 电流电压偏移 */
+	for(i=0;i<6;++i)
+	{
+		val = pbuf[i+6];
+                ade7858_dev->write_reg_32(ade7858_dev->dev,ADE7858_AIRMSOS+i,val);
+	}
+	/* 视在功率增益 */
+	for(i=0;i<3;++i)
+	{
+		val = pbuf[i+12];
+                ade7858_dev->write_reg_32(ade7858_dev->dev,ADE7858_AVAGAIN+i,val);
+	}
+
+	/* 有功无功功率增益偏移 */
+	for(i=0;i<12;++i)
+	{
+		val = pbuf[i+15];
+		ade7858_dev->write_reg_32(ade7858_dev->dev,ADE7858_AWGAIN+i,val);
+	}
+	/* 相位修正值 */
+	for(i=0;i<3;++i)
+	{
+		val = pbuf[i+27];
+                ade7858_dev->write_reg_32(ade7858_dev->dev,ADE7858_APHCAL+i,val);
+	}
+	return 0;
+}
+
+static ssize_t ade7858_har(char *buf)
+{
+	ssize_t len;
+	u16 val1 = 0;
+//	u8  val2 = 0;
+//	printk("ade7858_har\n");
+	if(!ade7858_dev->hsdc)
+		return 0;
+//	printk("ade7858_har2\n");
+
+	len = 4480;
+	memset(buf,0xff,len);
+	ade7858_dev->hsdc->transfer(ade7858_dev->hsdc,buf,len);
+
+//	printk("har:len=%d\n",ade7858_dev->hsdc->receive_bytes);
+	if(ade7858_dev->hsdc->receive_bytes < len)
+		return ade7858_dev->hsdc->receive_bytes;
+	return len;
+}
+
+static ssize_t ade7858_flicker(char *buf)
+{
+	ssize_t len;	
+	unsigned int sample=0;
+	char *tt;
+	
+	int value;		
+	int i,j;
+	int t;
+//printk("ade7858_har\n");
+	if(!ade7858_dev->hsdc)
+		return 0;
+//printk("ade7858_har2\n");
+
+	len = 4480;
+	memset(buf,0xff,len);
+	ade7858_dev->hsdc->transfer(ade7858_dev->hsdc,buf,len);
+
+
+    i=1;	//A相电压		
+		for(j=0;j<160;++j)
+		{			
+			value = (buf[(j*7+i)*4]<<24) | (buf[(j*7+i)*4+1] <<16) | (buf[(j*7+i)*4+2] << 8) | buf[(j*7+i)*4+3];	
+			t=(int)((value*10)/4489);
+			sample+=t*t ;				
+		}		 		
+	// value=sample;
+ // printk("%d\n",sample);
+  tt=(char*)&(sample);
+  buf[0]=tt[0];
+  buf[1]=tt[1];
+  buf[2]=tt[2];
+  buf[3]=tt[3];
+  
+ // printk("buf:%x %x %x %x \n",buf[0],buf[1],buf[2],buf[3]);
+	return 4;
+}
+
+
+static ssize_t ade7858_base(char *buf)
+{
+	int i;
+	u32 *pbuf = (u32 *) buf;
+	u32 pbuf_i_v[7];
+	u32 val;
+	u16 val16;
+	/* 电流 电压有效值 */
+	for(i=0;i<7;++i)
+	{
+		ade7858_dev->read_reg_32(ade7858_dev->dev,ADE7858_AIRMS+i,&val);
+		pbuf_i_v[i] = val;
+	}
+	pbuf[0]=pbuf_i_v[0];
+	pbuf[1]=pbuf_i_v[2];
+	pbuf[2]=pbuf_i_v[4];
+	pbuf[3]=pbuf_i_v[1];
+	pbuf[4]=pbuf_i_v[3];
+	pbuf[5]=pbuf_i_v[5];
+	pbuf[6]=pbuf_i_v[6];
+	/* 频率 */
+	ade7858_dev->read_reg_16(ade7858_dev->dev,ADE7858_PERIOD,&val16);
+	pbuf[7] = val16;
+	/* 有功、无功、视在功率 */
+	for(i=0;i<9;++i)
+	{
+		ade7858_dev->read_reg_32(ade7858_dev->dev,ADE7858_AWATT +i,&val);
+		pbuf[i+8] = val;
+	}
+	/* 相角 */
+	for(i=0;i<3;++i)
+	{
+		ade7858_dev->read_reg_32(ade7858_dev->dev,ADE7858_ANGLE0+i,&val);
+		pbuf[i+17] = val;
+	}
+	/* 状态 */
+	for(i=0;i<2;++i)
+	{
+		ade7858_dev->read_reg_32(ade7858_dev->dev,ADE7858_STATUS0+i,&val);
+		pbuf[i+20] = val;
+	}
+	return 88;
+}
+static ssize_t ade7858_awat(char *buf)
+{
+	int i;
+	u32 val;
+	u32 *pbuf = (u32 *) buf;
+	/* 有功电量 */
+	for(i=0;i<3;++i)
+	{
+		ade7858_dev->read_reg_32(ade7858_dev->dev,ADE7858_AWATTHR+i,&val);
+		pbuf[i] = val;
+	}
+	/* 无功电量 */
+	for(i=0;i<3;++i)
+	{
+		ade7858_dev->read_reg_32(ade7858_dev->dev,ADE7858_AVARHR+i,&val);
+                pbuf[i+3] = val;
+	}
+	return 24;
+}
+static ssize_t ade7858_rd (struct file *file, char *buf, size_t count, loff_t *offset)
+{
+
+        return 0;
+}
+
+static ssize_t ade7858_wr(struct file *file, const char *buf, size_t count, loff_t *offset)
+{
+        return 0;
+}
+
+static int ade7858_ioctl(struct inode *inode, struct file *file, unsigned int cmd, unsigned long arg)
+{
+	char buf[5120];
+	char *buffer = (char *)arg;
+	u16 reg;
+	u32 val;
+	u8  v8;
+	u16 v16;
+	ssize_t len;
+	if(!ade7858_dev)
+		return -1;
+	switch(cmd)
+	{
+		case ADE7858_RESET_DEV:
+			ade7858_reset(ade7858_dev->dev);
+			break;
+		case ADE7858_INITIAL:
+			ade7858_initial_setup(ade7858_dev);
+			break;
+		case ADE7858_RD_REG:
+			if(copy_from_user(&reg,buffer,2))
+				return -1;
+			if(ade7858_dev->read_reg_32(ade7858_dev->dev,reg,&val)!=4)
+				printk("read_reg_32 %x error\n",reg);;
+			if(copy_to_user(buffer+2,&val,4))
+				return -1;	
+			break;
+		case ADE7858_RD_REG_8:
+                        if(copy_from_user(&reg,buffer,2))
+                                return -1;
+                        if(ade7858_dev->read_reg_8(ade7858_dev->dev,reg,&v8)!=1)
+                                printk("read_reg_8 %x error\n",reg);;
+                        if(copy_to_user(buffer+2,&v8,1))
+                                return -1;
+                        break;
+		
+		case ADE7858_RD_REG_16:
+                        if(copy_from_user(&reg,buffer,2))
+                                return -1;
+                        if(ade7858_dev->read_reg_16(ade7858_dev->dev,reg,&v16)!=2)
+                                printk("read_reg_16 %x error\n",reg);;
+                        if(copy_to_user(buffer+2,&v16,2))
+                                return -1;
+                        break;
+		case ADE7858_WR_REG:
+			if(copy_from_user(&reg,buffer,2))
+				return -1;
+			if(copy_from_user(&val,buffer+2,4))
+				return -1;
+			if(ade7858_dev->write_reg_32(ade7858_dev->dev,reg,val)!=6)
+				printk("ade7858 write reg %x error\n",reg);
+			break;
+		case ADE7858_WR_REG_8:
+			if(copy_from_user(&reg,buffer,2))
+				return -1;
+			if(copy_from_user(&v8,buffer+2,1))
+				return -1;
+			if(ade7858_dev->write_reg_8(ade7858_dev->dev,reg,v8)!=3)
+				printk("ade7858 write reg %x error\n",reg);
+			break;
+		case ADE7858_WR_REG_16:
+                        if(copy_from_user(&reg,buffer,2))
+                                return -1;
+                        if(copy_from_user(&v16,buffer+2,2))
+                                return -1;
+                        if(ade7858_dev->write_reg_16(ade7858_dev->dev,reg,v16)!=4)
+                                printk("ade7858 write reg %x error\n",reg);
+                        break;
+		case ADE7858_ADJ_DEV:	
+			if(copy_from_user(buf,buffer,120))
+				return -1;
+			ade7858_adj(buf);	
+			break;
+		case ADE7558_HAR_REG:
+			len = ade7858_har(buf);
+			if(copy_to_user(buffer,buf,len))
+				return -1;
+			break;
+			
+		case ADE7558_FLICKER_REG:
+			len = ade7858_flicker(buf);
+			if(copy_to_user(buffer,buf,len))
+				return -1;
+			break;						
+			
+		case ADE7858_BASE_REG:
+			len = ade7858_base(buf);
+			if(copy_to_user(buffer,buf,len))
+				return -1;
+			break;
+		case ADE7858_AWAT_REG:
+			len = ade7858_awat(buf);
+			if(copy_to_user(buffer,buf,len))
+				return -1;
+			break;
+		default:
+			break;
+	}	
+	return 0;
+}
+
+static int ade7858_open(struct inode *inode, struct file *file)
+{
+        return 0;
+}
+
+static int ade7858_close(struct inode *inode, struct file *file)
+{
+
+        return 0;
+}
+
+static struct file_operations ade7858_fops = {
+        .owner  = THIS_MODULE,
+        .read   = ade7858_rd,
+        .write  = ade7858_wr,
+        .ioctl  = ade7858_ioctl,
+        .open   = ade7858_open,
+        .release= ade7858_close,
+};
+
+#define ADE7858_MAJOR 200
+
+static int __init at91_ade7858_init(void)
+{
+
+        printk(KERN_INFO "ade7858 /dev entries driver\n");
+        if (register_chrdev(ADE7858_MAJOR, "ade7858", &ade7858_fops)) {
+                printk(KERN_ERR "at91_spidev: Unable to get major %d for ade7858\n", ADE7858_MAJOR);
+                return -EIO;
+        }
+
+        printk(KERN_INFO "AT91 ADE7858 driver loaded\n");
+
+        return 0;
+}
+
+
+static void __exit at91_ade7858_exit(void)
+{
+
+        unregister_chrdev(ADE7858_MAJOR, "ade7858");
+}
+
+
+module_init(at91_ade7858_init);
+module_exit(at91_ade7858_exit);
+MODULE_AUTHOR("zzl <zzltjjd@163.com>");
+MODULE_DESCRIPTION("Analog Devices ADE7858/58/68/78 Polyphase Multifunction Energy Metering IC Driver");
+MODULE_LICENSE("GPL v2");

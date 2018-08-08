@@ -1,0 +1,266 @@
+/*
+ *  drivers/char/hndl_char_devices/hnos_bat_adc.c
+ *
+ *  Routines for power/VCC5V ADC.
+ *
+ *
+ *  This program is free software; you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation; either version 2 of the License, or
+ *  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program; if not, write to the Free Software
+ *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ */
+
+#include "hnos_generic.h"
+#include "hnos_proc.h" 
+#include "hnos_bat_adc.h"
+
+#define DEVICE_NAME		"power_voltage"
+
+static int power_major =   0;
+static int power_minor =   0;
+
+struct hndl_power_cdev 
+{
+    unsigned long is_open;
+    struct class *myclass;
+    struct cdev cdev; 
+};
+
+static struct hndl_power_cdev *power_dev = NULL;
+int power_open(struct inode *inode, struct file *filp);
+int power_release(struct inode *inode, struct file *filp);
+ssize_t power_read(struct file *filp, char __user *buf, size_t count, loff_t *f_pos);
+
+struct file_operations hndl_power_fops =
+{
+    .owner =    THIS_MODULE,
+    .open =     power_open,
+    .release =  power_release,
+    .read = power_read,
+};
+
+int power_open(struct inode *inode, struct file *filp)
+{
+    struct hndl_power_cdev *dev; 
+    dev = container_of(inode->i_cdev, struct hndl_power_cdev, cdev);
+    filp->private_data = dev; 
+    if(test_and_set_bit(0, &dev->is_open) != 0) 
+	{
+        return -EBUSY;       
+    }
+	
+    return 0; 
+}
+
+int power_release(struct inode *inode, struct file *filp)
+{
+    struct hndl_power_cdev *dev = filp->private_data; 
+
+    if(test_and_clear_bit(0, &dev->is_open) == 0) 
+	{
+        return -EINVAL; 
+    }
+
+    return 0;
+}
+
+ssize_t power_read(struct file *filp, char __user *buf, size_t count, loff_t *f_pos)
+{
+    unsigned char redata[4] = {0};
+    int k, len;
+    unsigned int voltage_value = 0;
+
+    k = sizeof(unsigned int);
+    len = (count > k)? k : count;
+
+    if(0 != adc_channel_read(ADC_CH_VCC5V, &voltage_value))
+        voltage_value = ADC_RESLT_INVALID;
+
+    memcpy(&redata[0], &voltage_value, len);
+
+    if(copy_to_user(buf, redata, len))
+	{
+        return (-EFAULT);
+    }
+	
+    return len;   
+}
+
+/* 
+ * Sample the Battery voltage.
+ * The ADC is 10 bit resolution and range from 0V to VREF(3.3V).
+ */
+int bat_voltage_get(struct proc_item *item, char *page)
+{
+    unsigned int len = 0;
+    unsigned int adc = 0;
+
+    if(0 == adc_channel_read(ADC_CH_BATTERY, &adc)) 
+	{
+        len = sprintf(page, "%d\n", adc);
+    } 
+	else 
+	{
+        len = sprintf(page, "%d\n", ADC_RESLT_INVALID);
+    }
+
+    return len;
+}
+
+int bat_voltage_get_hex(struct proc_item *item, char *page)
+{
+    unsigned int len = 0;
+    unsigned int adc = 0;
+
+    if(0 == adc_channel_read(ADC_CH_BATTERY, &adc)) 
+	{
+        len = sprintf(page, "%x\n", adc);
+    } 
+	else 
+	{
+        len = sprintf(page, "%d\n", ADC_RESLT_INVALID);
+    }
+
+
+    return len;
+}
+
+int vcc5v_voltage_get(struct proc_item *item, char *page)
+{
+    unsigned int len = 0;
+    unsigned int adc = 0;
+
+    if(0 == adc_channel_read(ADC_CH_VCC5V, &adc)) 
+	{
+        len = sprintf(page, "%x\n", adc);
+    } else {
+        len = sprintf(page, "%x\n", ADC_RESLT_INVALID);
+    }
+	
+    return len;
+}
+
+int rtc_voltage_get(struct proc_item *item, char *page)
+{
+    unsigned int len = 0;
+    unsigned int adc = 0;
+
+    if (0 == adc_channel_read(ADC_CH_RTC, &adc)) {
+        len = sprintf(page, "%x\n", adc);
+    } else {
+        len = sprintf(page, "%x\n", ADC_RESLT_INVALID);
+    }
+    return len;
+
+}
+
+static void  power_module_exit(void)
+{
+    dev_t devno = MKDEV(power_major, power_minor);    
+    struct class * myclass;
+
+    if(power_dev)
+	{
+        /* Get rid of our char dev entries */    
+        cdev_del(&power_dev->cdev); 
+
+        myclass = power_dev->myclass;
+        if(myclass)
+		{
+            class_device_destroy(myclass, devno);
+            class_destroy(myclass);
+        }
+
+        kfree(power_dev);
+        power_dev = NULL;
+    }
+
+    /* cleanup_module is never called if registering failed */
+    unregister_chrdev_region(devno, 1);
+
+    HNOS_DEBUG_INFO("Battery ADC module exit.\n");
+    return ;
+}
+
+/* proc module init */
+static int __init power_module_init(void)
+{
+    int result = 0;
+    dev_t dev = 0;
+    struct class *myclass;
+
+    if(power_major)
+	{ 
+        dev = MKDEV(power_major, power_minor);
+        result = register_chrdev_region(dev, 1, DEVICE_NAME);
+    } 
+    else
+	{ 
+        result = alloc_chrdev_region(&dev, power_minor, 1, DEVICE_NAME);
+        power_major = MAJOR(dev);
+    }
+    if(result < 0) 
+	{
+        printk(KERN_WARNING "Power: can't get major %d\n", power_major);
+        return result;
+    }
+
+    power_dev = kmalloc(sizeof(struct hndl_power_cdev), GFP_KERNEL);
+    if(!power_dev) 
+	{
+        pr_debug("BATTERY: can't alloc battery_dev\n");
+        result = -ENOMEM;
+        goto fail;  /* Make this more graceful */
+    }
+    memset(power_dev, 0, sizeof(struct hndl_power_cdev)); 
+
+    /* Register a class_device in the sysfs. */
+    myclass = class_create(THIS_MODULE, DEVICE_NAME);
+    if(myclass == NULL) 
+	{
+        pr_debug("Power: can't creat class\n");
+        result = -ENODEV;
+        goto fail;
+    }
+    class_device_create(myclass, NULL, dev, NULL, DEVICE_NAME);
+    power_dev->myclass = myclass;
+    cdev_init(&power_dev->cdev, &hndl_power_fops);
+    power_dev->cdev.owner = THIS_MODULE;
+    result = cdev_add(&power_dev->cdev, dev, 1);
+    if(result) 
+	{
+        printk(KERN_NOTICE "Error %d adding power device, major_%d.\n", result, MAJOR(dev));
+        goto fail;
+    }   
+    
+	at91_set_A_periph(AT91_PIN_PC1, 0); 
+	at91_set_A_periph(AT91_PIN_PC2, 0); 
+	at91_set_A_periph(AT91_PIN_PC3, 0);  
+                     
+    HNOS_DEBUG_INFO("Proc Filesystem Interface of Battery/Power ADC Management init.\n");
+    return 0;
+
+fail:
+    power_module_exit();
+    return result;
+}
+
+module_init(power_module_init);
+module_exit(power_module_exit);
+
+EXPORT_SYMBOL(bat_voltage_get);
+EXPORT_SYMBOL(bat_voltage_get_hex);
+EXPORT_SYMBOL(vcc5v_voltage_get);
+
+MODULE_AUTHOR("ZhangRM");
+MODULE_LICENSE("GPL");
+MODULE_LICENSE("Dual BSD/GPL");

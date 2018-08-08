@@ -1,0 +1,728 @@
+#
+#HNDL-series charater devices
+#
+
+menu "HNDL-series character devices "
+
+config HNDL_DEVICES
+	tristate "Wfet devices support"
+	---help---
+	  If you say Y here (and to one of the following options) and create some
+	  character special devices.
+	  If unsure, say N.
+
+
+comment "Product Select"
+	depends on HNDL_DEVICES
+choice
+	prompt "HNDL Product"
+	default HNDL_PRODUCT_NETMETER
+
+config HNDL_PRODUCT_NETMETER
+	bool "NetMeter"
+	depends on HNDL_DEVICES && ARCH_AT91SAM9260 
+
+config HNDL_PRODUCT_METERGATHER
+	bool "MeterGather"
+	depends on HNDL_DEVICES && ARCH_AT91SAM9260 
+
+config HNDL_PRODUCT_HNTT1800X
+	bool "HNTT1800X"
+	depends on HNDL_DEVICES && ARCH_AT91SAM9260 
+
+endchoice
+
+
+comment "Product Independent Device"
+	depends on HNDL_DEVICES
+
+config  PROC_INTERFACE
+	tristate "proc interface "
+	depends on HNDL_DEVICES 
+	default m
+
+config  IOMEM_MANAGEMENT
+	tristate "iomem interface "
+	depends on HNDL_DEVICES 
+	default m
+
+config  GPIO_INTERFACE
+	tristate "gpio interface "
+	depends on HNDL_DEVICES 
+	default m
+
+config HNOS_VERSION
+	tristate "hnlinux version "
+	depends on HNDL_DEVICES 
+	default m
+
+config BAT_ADC
+	tristate "AT91 Battery ADC Support"
+	depends on HNDL_DEVICES 
+	default m
+
+config DC_INTERFACE
+	tristate "DC Analog Interface Support"
+	depends on HNDL_DEVICES 
+	default m
+
+config AT91_LED
+	tristate "AT91 LED Support"
+	depends on HNDL_DEVICES
+	default m
+
+config COMMU_MODULES
+	tristate "AT91 communication modules Support"
+	depends on HNDL_DEVICES 
+	default m
+
+config AT91_KBD
+	tristate "AT91 KeyBoard Support"
+	depends on HNDL_DEVICES 
+	default m
+
+config PROGRAM_BUTTON
+	tristate "AT91 Program Enabled Button Support"
+	depends on HNDL_DEVICES 
+	default m
+	
+config AT91_PROG
+        tristate "AT91 Program Enabled Button for NetMeter Support"
+	depends on HNDL_DEVICES 
+        default m
+
+config AT91_PULSE
+	tristate "AT91 Pulse Mesurement Support"
+	depends on HNDL_DEVICES 
+	default m
+
+config AT91_INPUT
+	tristate "AT91 Remote Input Signal Support"
+	depends on HNDL_DEVICES 
+	default m
+
+config AT91_OUTPUT
+	tristate "AT91 Output Control Support"
+	depends on HNDL_DEVICES 
+	default m
+
+config TTYS2_MODE
+	tristate "AT91 DBGU/IRDA Serial Port (ttyS2) Switch Support"
+	depends on HNDL_DEVICES 
+	default m
+
+config AT91_DEBUG
+	tristate "AT91 Debug Module Support"
+	depends on HNDL_DEVICES
+	default m
+
+config RST_REASON
+	tristate "AT91 Reset Reason Support"
+	depends on HNDL_DEVICES
+	default m
+
+config AT91_TEST
+	tristate "AT91 Test Mode Support"
+	help
+	On AT91SAM9260 General Module, a GPIO "PA27" was used to determine the mode of the product, 
+	while high in TEST mode and low in NORMAL mode. 
+
+	depends on HNDL_DEVICES
+	default m
+
+config COMMU_GENERIC
+	tristate "AT91 Commu modules for HNTT1800X/HNDL900B/HNDL-ND2000 and etc."
+	depends on HNDL_DEVICES 
+	default m
+
+config LCD_UC1698U
+	tristate "AT91 LCD UC1698U Support"
+	depends on HNDL_DEVICES 
+	default m
+
+config AT91_AP89170
+	tristate "AT91 Voice ap89170 Support"
+	depends on HNDL_DEVICES 
+	default m
+	
+config AT91_FM1702SL
+	depends on HNDL_DEVICES 
+	tristate "AT91 FmCard fm1702sl Support"
+	default m
+	
+config AT91_PTCT
+	tristate "CT detect Support"
+	depends on HNDL_DEVICES 
+	help
+	CT detect by counter enabled.
+	default m
+
+config AT91_RTT
+	tristate "Rtt proc for at91"
+	depends on HNDL_DEVICES
+	default m
+	
+config RELAY_GENERIC
+	tristate "Relay module	Support"
+	depends on HNDL_DEVICES
+	default m
+	
+config ESAM_GENERIC
+	tristate "Esam module  Support"
+	depends on HNDL_DEVICES
+	default m 
+	
+config POWER_GENERIC
+	tristate "Power module	Support"
+	depends on HNDL_DEVICES
+	default m	
+
+comment "Product Dependent Device"
+		depends on HNDL_DEVICES
+## ============================= HNDL-800A, NetMeter. ==================================== ##
+
+config PRODUCT_NETMETER
+	tristate "Product Information for Netmeter "
+	depends on HNDL_DEVICES && HNDL_PRODUCT_NETMETER
+	default m
+
+config BATTERY_NETMETER
+	tristate "Battery Manage for Netmeter "
+	depends on HNDL_DEVICES && HNDL_PRODUCT_NETMETER
+	default m
+
+config COMMU_NETMETER
+	tristate "Commu modules for Netmeter."
+	depends on HNDL_DEVICES && HNDL_PRODUCT_NETMETER 
+	default m
+
+config LED_NETMETER
+	tristate "LED for NetMeter Support"
+	depends on HNDL_DEVICES && HNDL_PRODUCT_NETMETER 
+	default m
+
+config AT91_PROG
+	tristate "AT91 Program Enabled Button for NetMeter Support"
+	depends on HNDL_DEVICES && HNDL_PRODUCT_NETMETER 
+	default m
+
+config AT91_EVENT
+	tristate "AT91 BaseMeter Event Status for NetMeter Support"
+	depends on HNDL_DEVICES && HNDL_PRODUCT_NETMETER 
+	default m
+
+config OUTPUT_NETMETER
+	tristate "Proc Interface of GPIO Control for NetMeter Support ( Debug Only! )"
+	depends on HNDL_DEVICES && HNDL_PRODUCT_NETMETER 
+	default m
+
+
+## ========================  HNDL-ND2000 ===================================== ##
+
+config BATTERY_METERGATHER
+	tristate "Battery Manage for HNDL-ND2000 "
+	depends on HNDL_DEVICES && HNDL_PRODUCT_METERGATHER 
+	default m
+
+config AT91_PLC
+	tristate "AT91 PLC Module Control Support"
+	depends on HNDL_DEVICES && HNDL_PRODUCT_METERGATHER 
+	default m
+
+config KBD_METERGATHER
+	tristate "KeyBoard for MeterGather (Such as HNDL-ND2000) Support"
+	depends on HNDL_DEVICES && HNDL_PRODUCT_METERGATHER 
+	default m
+
+# ========================= HNTT1800X ================================================== ##
+#
+config PRODUCT_HNTT1800X
+	tristate "Product Information for HNTT-1800X "
+	depends on HNDL_DEVICES && (HNDL_PRODUCT_HNTT1800X ||HNDL_PRODUCT_HNTT1800SJL)
+	default m
+
+config BATTERY_HNTT1800X
+	tristate "Battery Manage for HNTT-1800X "
+	depends on HNDL_DEVICES && (HNDL_PRODUCT_HNTT1800X ||HNDL_PRODUCT_HNTT1800SJL)
+	default m
+	
+config PARALLEL_LED
+	bool "Parallel led suport for FKGA43 and extend bus test"
+	depends on HNDL_DEVICES && (HNDL_PRODUCT_HNTT1800X ||HNDL_PRODUCT_HNTT1800SJL)
+#	default m
+	
+config KBD_HNTT1800X
+	tristate "KeyBoard for HNTT1800X Support"
+	depends on HNDL_DEVICES && (HNDL_PRODUCT_HNTT1800X ||HNDL_PRODUCT_HNTT1800SJL)
+	default m
+
+config AT91_AD79X1
+	tristate "AD7911/AD7921 on Platform AT91SAM9260 support"
+	depends on HNDL_DEVICES && HNDL_PRODUCT_HNTT1800X 
+	help
+	AD79X1 need SPI enabled.
+	default m
+
+config AT91_MCP320X
+	tristate "ADC MCP3204/3208 on Platform AT91SAM9260 support"
+	depends on HNDL_DEVICES && (HNDL_PRODUCT_HNTT1800X || HNDL_PRODUCT_HNTT1800SJL)
+
+	help
+	MCP320X need SPI enabled.
+	default m
+
+config LED_HNTT1800X
+	tristate "LED for HNTT1800X"
+	depends on HNDL_DEVICES && HNDL_PRODUCT_HNTT1800X 
+	default m
+
+config INPUT_HNTT1800X
+	tristate "Input Signal State for HNTT1800X"
+	depends on HNDL_DEVICES && HNDL_PRODUCT_HNTT1800X 
+	default m
+
+config OUTPUT_HNTT1800X
+	tristate "Output Control Signal for HNTT1800X"
+	depends on HNDL_DEVICES && HNDL_PRODUCT_HNTT1800X 
+	default m
+
+config CARRIER_HNTT1800X
+	tristate "Carrier Wave Signal for HNTT1800X"
+	depends on HNDL_DEVICES && (HNDL_PRODUCT_HNTT1800X ||HNDL_PRODUCT_HNTT1800SJL)
+	default m
+
+config PULSE_HNTT1800X
+	tristate "Pulse Measure for HNTT1800X"
+	depends on HNDL_DEVICES && HNDL_PRODUCT_HNTT1800X 
+	default m
+
+config USART_9BIT
+	tristate "USART 9 Bit Mode Support"
+	depends on HNDL_DEVICES && HNDL_PRODUCT_HNTT1800X 
+	default m
+
+config MONITOR_6513
+	tristate "monitor for Chip TDK6513 Support"
+	depends on HNDL_DEVICES && HNDL_PRODUCT_HNTT1800X 
+	default m
+
+# ========================= HNTT1800X ================================================== ##
+
+config LCD_HNTT1800U
+	tristate "hntt1800u lcd reset and backlight callbacks."
+	depends on HNDL_DEVICES && HNDL_PRODUCT_HNTT1800U
+	default m
+
+config GPIO_BUS
+	tristate "GPIO Bus layer for HNTT-1800U "
+	depends on HNDL_DEVICES && HNDL_PRODUCT_HNTT1800U 
+        default m
+
+config BATTERY_HNTT1800U
+	tristate "Battery Manage for HNTT-1800U "
+	depends on HNDL_DEVICES && HNDL_PRODUCT_HNTT1800U 
+        default m
+
+config KBD_HNTT1800U
+	tristate "Keyboard for HNTT-1800U "
+	depends on HNDL_DEVICES && HNDL_PRODUCT_HNTT1800U 
+        default m
+
+config INPUT_HNTT1800U
+	tristate "RMI for HNTT-1800U "
+	depends on HNDL_DEVICES && HNDL_PRODUCT_HNTT1800U 
+        default m
+
+config COMMU_HNTT1800U
+	tristate "COMMU for HNTT-1800U "
+	depends on HNDL_DEVICES && HNDL_PRODUCT_HNTT1800U 
+        default m
+
+config LED_HNTT1800U
+	tristate "LED for HNTT1800U"
+	depends on HNDL_DEVICES && HNDL_PRODUCT_HNTT1800U 
+	default m
+
+config PTCT_HNTT1800U
+	tristate "PTCT for HNTT1800U"
+	depends on HNDL_DEVICES && HNDL_PRODUCT_HNTT1800U
+	default m	
+
+config OUTPUT_HNTT1800U
+	tristate "Output Control Signal for HNTT1800X"
+	depends on HNDL_DEVICES && HNDL_PRODUCT_HNTT1800U
+	default m
+
+config PLC_HNTT1800U
+	tristate "PLC module for HNTT1800U"
+	depends on  (HNDL_PRODUCT_HNTT1800U)
+	default y
+
+## =======================================  HNDL-900FJ =============================================== ##
+config KBD_HNDL900FJ
+	tristate "KeyBoard for HNDL900FJ Support"
+	depends on HNDL_DEVICES && HNDL_PRODUCT_HNDL900FJ 
+	default m
+
+config INPUT_HNDL900FJ
+	tristate "Input Signal State for HNDL900FJ"
+	depends on HNDL_DEVICES && HNDL_PRODUCT_HNDL900FJ 
+	default m
+
+config OUTPUT_HNDL900FJ
+	tristate "Output Control Signal for HNDL900FJ"
+	depends on HNDL_DEVICES && HNDL_PRODUCT_HNDL900FJ 
+	default m
+
+config PULSE_HNDL900FJ
+	tristate "Pulse Measure for HNDL900FJ"
+	depends on HNDL_DEVICES && HNDL_PRODUCT_HNDL900FJ 
+	default m
+
+config LED_HNDL900FJ
+	tristate "LEDs for HNDL900FJ"
+	depends on HNDL_DEVICES && HNDL_PRODUCT_HNDL900FJ 
+	default m
+
+## =====================================  HNTT-1800S-JL =============================================== ##
+config KBD_HNTT1800SJL
+	tristate "KeyBoard for HNTT1800SJL Support"
+	depends on HNDL_DEVICES && HNDL_PRODUCT_HNTT1800SJL 
+	default m
+
+config INPUT_HNTT1800SJL
+	tristate "Input Signal State for HNTT1800SJL"
+	depends on HNDL_DEVICES && HNDL_PRODUCT_HNTT1800SJL 
+	default m
+
+config OUTPUT_HNTT1800SJL
+	tristate "Output Control Signal for HNTT1800SJL"
+	depends on HNDL_DEVICES && HNDL_PRODUCT_HNTT1800SJL 
+	default m
+
+config LED_HNTT1800SJL
+	tristate "LEDs for HNTT1800SJL"
+	depends on HNDL_DEVICES && HNDL_PRODUCT_HNTT1800SJL 
+	default m
+
+## =====================================  HNTT-1800S-SC =============================================== ##
+config KBD_HNTT1800SSC
+	tristate "KeyBoard for HNTT1800SSC Support"
+	depends on HNDL_DEVICES && HNDL_PRODUCT_HNTT1800SSC 
+	default m
+
+config INPUT_HNTT1800SSC
+	tristate "Input Signal State for HNTT1800SSC"
+	depends on HNDL_DEVICES && HNDL_PRODUCT_HNTT1800SSC 
+	default m
+
+config OUTPUT_HNTT1800SSC
+	tristate "Output Control Signal for HNTT1800SSC"
+	depends on HNDL_DEVICES && HNDL_PRODUCT_HNTT1800SSC 
+	default m
+
+config LED_HNTT1800SSC
+	tristate "LEDs for HNTT1800SSC"
+	depends on HNDL_DEVICES && HNDL_PRODUCT_HNTT1800SSC 
+	default m
+	
+config PULSE_HNTT1800SSC
+	tristate "Pulse Measure for HNTT1800SSC"
+	depends on HNDL_DEVICES && HNDL_PRODUCT_HNTT1800SSC 
+	default m
+
+config RTT_HNDL1000X
+	tristate "RTT PROC for HNTT1800SSC"
+	depends on HNDL_DEVICES && HNDL_PRODUCT_HNTT1800SSC 
+	default m	
+	
+# ====================================  HNDL-900B  =================================================== ## 
+config KBD_HNDL900B
+	tristate "KeyBoard for HNDL900B Support"
+	depends on HNDL_DEVICES && HNDL_PRODUCT_HNDL900B 
+	default m
+
+config LED_HNDL900B
+	tristate "LED for HNDL900B"
+	depends on HNDL_DEVICES && HNDL_PRODUCT_HNDL900B 
+	default m
+
+config INPUT_HNDL900B
+	tristate "Input Signal State for HNDL900B"
+	depends on HNDL_DEVICES && HNDL_PRODUCT_HNDL900B 
+	default m
+
+config OUTPUT_HNDL900B
+	tristate "Output Control Signal for HNDL900B"
+	depends on HNDL_DEVICES && HNDL_PRODUCT_HNDL900B 
+	default m
+  
+
+## =====================================  HNTT-1800 Shanghai=============================================== ##
+
+config SLCD_HNTT1800SH
+	tristate "Segment LCD for HNTT1800 Shanghai Support"
+	depends on HNDL_DEVICES && HNDL_PRODUCT_HNTT1800SH
+	default m
+
+config KBD_HNTT1800SH
+	tristate "KeyBoard for HNTT1800 Shanghai Support"
+	depends on HNDL_DEVICES && HNDL_PRODUCT_HNTT1800SH
+	default m
+
+config INPUT_HNTT1800SH
+	tristate "Input Signal State for HNTT1800 Shanghai"
+	depends on HNDL_DEVICES && HNDL_PRODUCT_HNTT1800SH
+	default m
+
+config BATTERY_HNTT1800SH
+	tristate "Battery Control for HNTT1800 Shanghai"
+	depends on HNDL_DEVICES && HNDL_PRODUCT_HNTT1800SH
+	default m
+
+config LED_HNTT1800SH
+	tristate "LEDs for HNTT1800SJL"
+	depends on HNDL_DEVICES && HNDL_PRODUCT_HNTT1800SH
+	default m
+
+config COMMU_HNTT1800SH
+	tristate "Commu for HNTT1800 Shanghai Support"
+	depends on HNDL_DEVICES && HNDL_PRODUCT_HNTT1800SH
+	default m
+
+#========================================= HNDL1000X ==============
+
+	config LCD_HNDL1000X
+	tristate "Lcd control for HNDL1000X  Support"
+	depends on HNDL_DEVICES && HNDL_PRODUCT_HNDL1000X 
+	default m
+
+	config PRODUCT_INFO_HNDL1000X
+	tristate "Product information for HNDL1000X  Support"
+	depends on HNDL_DEVICES && HNDL_PRODUCT_HNDL1000X 
+	default m
+
+	config ATT7022_CALI
+	tristate "Att7022 calibrate control for HNDL1000X  Support"
+	depends on HNDL_DEVICES && HNDL_PRODUCT_HNDL1000X 
+	default m        
+
+	config COMMU_HNDL1000X
+	tristate "Commu control for HNDL1000X  Support"
+	depends on HNDL_DEVICES && HNDL_PRODUCT_HNDL1000X 
+	default m 
+
+	config INPUT_HNDL1000X
+	tristate "Input Signal State for HNDL1000X Support"
+	depends on HNDL_DEVICES && HNDL_PRODUCT_HNDL1000X 
+	default m
+
+	config OUTPUT_HNDL1000X
+	tristate "Output Signal State for HNDL1000X Support"
+	depends on HNDL_DEVICES && HNDL_PRODUCT_HNDL1000X 
+	default m		
+
+	config LED_HNDL1000X
+	tristate "LED for HNDL1000X Support"
+	depends on HNDL_DEVICES && HNDL_PRODUCT_HNDL1000X 
+	default m
+
+	config KBD_HNDL1000X
+	tristate "KeyBoard for HNDL1000X Support"
+	depends on HNDL_DEVICES && HNDL_PRODUCT_HNDL1000X 
+	default m
+
+	config PULSE_HNDL1000X
+	tristate "Pulse Measure for HNDL1000X Support"
+	depends on HNDL_DEVICES && HNDL_PRODUCT_HNDL1000X 
+	default m
+
+	config RELAY_HNDL1000X
+	tristate "Relay led opt for HNDL1000X Support"
+	depends on HNDL_DEVICES && HNDL_PRODUCT_HNDL1000X 
+	default m
+
+	config TIMER_HNDL1000X
+	tristate "SofeTimer for HNDL1000X Support"
+	depends on HNDL_DEVICES && HNDL_PRODUCT_HNDL1000X 
+	default m
+
+	config PTCT_HNDL1000X
+	tristate "Ptct for HNDL1000X Support"
+	depends on HNDL_DEVICES && HNDL_PRODUCT_HNDL1000X 
+	default m	
+
+	config BATTERY_HNDL1000X
+	tristate "Battry control for HNDL1000X Support"
+	depends on HNDL_DEVICES && HNDL_PRODUCT_HNDL1000X
+	default m  	
+
+	config ESAM_HNDL1000X
+	tristate "Esam for HNDL1000X Support"
+	depends on HNDL_DEVICES && HNDL_PRODUCT_HNDL1000X
+	default m  
+ 
+		
+#============================ HNTT1800E_SHANGHAI ====================
+#shanhai HNTT1800ESH
+
+	config COMMU_HNTT1800ESH
+	tristate "Commu control for HNTT1800ESH Support"
+	depends on HNDL_DEVICES && HNDL_PRODUCT_HNTT1800ESH 
+	default m
+
+	config LED_HNTT1800ESH
+	tristate "LED for HNTT1800ESH Support"
+	depends on HNDL_DEVICES && HNDL_PRODUCT_HNTT1800ESH 
+	default m
+
+	config INPUT_HNTT1800ESH
+	tristate "Input Signal State for HNTT1800ESH Support"
+	depends on HNDL_DEVICES && HNDL_PRODUCT_HNTT1800ESH 
+	default m
+
+	config OUTPUT_HNTT1800ESH
+	tristate "Output Control Signal for HNTT1800ESH Support"
+	depends on HNDL_DEVICES && HNDL_PRODUCT_HNTT1800ESH 
+	default m
+
+	config PULSELEVEL_HNTT1800ESH
+	tristate "PULSE LEVEL for HNTT1800ESH Support"
+	depends on HNDL_DEVICES && HNDL_PRODUCT_HNTT1800ESH 
+	help
+  shanghai pulse level detect by counter enabled.
+	default m
+
+	config AT91_71M6534
+	tristate "monitor for Chip 71M6534 Support"
+	depends on HNDL_DEVICES && HNDL_PRODUCT_HNTT1800ESH 
+	default m
+
+	config PTCT_HNTT1800ESH
+	tristate "PTCT for HNTT1800ESH Support"
+	depends on HNDL_DEVICES && HNDL_PRODUCT_HNTT1800ESH 
+	default m	
+
+	config BATTERY_HNTT1800ESH
+	tristate "Battry control for HNTT1800ESH  Support"
+	depends on HNDL_DEVICES && HNDL_PRODUCT_HNTT1800ESH
+	default m 
+
+
+#============================ HNDL1000SG_BASE ====================
+#BASE HNDL1000SG
+
+	config LCD_HNDL1000SG
+	tristate "lcd control for HNDL1000SG Support"
+	depends on HNDL_DEVICES && HNDL_PRODUCT_HNDL1000SG
+	default m
+
+	config PRODUCT_INFO_HNDL1000SG
+	tristate "product informations for HNDL1000SG Support"
+	depends on HNDL_DEVICES && HNDL_PRODUCT_HNDL1000SG 
+	default m
+
+	config COMMU_HNDL1000SG
+	tristate "Commu control for HNDL1000SG Support"
+	depends on HNDL_DEVICES && HNDL_PRODUCT_HNDL1000SG
+	default m 
+
+	config INPUT_HNDL1000SG
+	tristate "Input Signal State for HNDL1000SG Support"
+	depends on HNDL_DEVICES && HNDL_PRODUCT_HNDL1000SG 
+	default m
+
+	config OUTPUT_HNDL1000SG
+	tristate "Output Signal State for HNDL1000SG Support"
+	depends on HNDL_DEVICES && HNDL_PRODUCT_HNDL1000SG
+	default m		
+
+	config LED_HNDL1000SG
+	tristate "LED for HNDL1000SG Support"
+	depends on HNDL_DEVICES && HNDL_PRODUCT_HNDL1000SG
+	default m
+
+	config KBD_HNDL1000SG
+	tristate "KeyBoard for HNDL1000SG Support"
+	depends on HNDL_DEVICES && HNDL_PRODUCT_HNDL1000SG 
+	default m
+
+	config PULSE_HNDL1000SG
+	tristate "Pulse Measure for HNDL1000SG"
+	depends on HNDL_DEVICES && HNDL_PRODUCT_HNDL1000SG 
+	default m
+
+	config PTCT_HNDL1000SG
+	tristate "Ptct for HNDL1000SG Support"
+	depends on HNDL_DEVICES && HNDL_PRODUCT_HNDL1000SG 
+	default m	
+
+	config BATTERY_HNDL1000SG
+	tristate "Battry control for HNDL1000SG	Support"
+	depends on HNDL_DEVICES && HNDL_PRODUCT_HNDL1000SG
+	default m
+	
+	config TIMER_HNDL1000SG
+	tristate "SofeTimer for HNDL1000SG Support"
+	depends on HNDL_DEVICES && HNDL_PRODUCT_HNDL1000SG 
+	default m
+
+	config ESAM_HNDL1000SG
+	tristate "Esam for HNDL1000SG Support"
+	depends on HNDL_DEVICES && HNDL_PRODUCT_HNDL1000SG
+	default m  
+
+	config RELAY_HNDL1000SG
+	tristate "Relay for HNDL1000SG Support"
+	depends on HNDL_DEVICES && HNDL_PRODUCT_HNDL1000SG
+	default m 
+	
+	config POWER_HNDL1000SG
+	tristate "Power for HNDL1000SG Support"
+	depends on HNDL_DEVICES && HNDL_PRODUCT_HNDL1000SG
+	default m 
+
+	
+## =======================================  HNDL-1600U =============================================== ##
+config KBD_HNDL1600U
+	tristate "KeyBoard for HNDL1600U Support"
+	depends on  (HNDL_PRODUCT_HNDL1600U)
+	default y
+
+config PLC_HNDL1600U
+	tristate "PLC module for HNDL1600U"
+	depends on  (HNDL_PRODUCT_HNDL1600U)
+	default y
+	
+config COMMU_HNDL1600U
+	tristate "communication module for HNDL1600U"
+	depends on  (HNDL_PRODUCT_HNDL1600U)
+	default y
+	
+config OUTPUT_HNDL1600U
+	tristate "Output Control Signal for HNDL1600U"
+	depends on  (HNDL_PRODUCT_HNDL1600U)
+	default y	
+	
+config PIO_HNDL1600U
+	tristate "Product IO Pins Control for HNDL1600U"
+	depends on  (HNDL_PRODUCT_HNDL1600U)
+	default y	
+	
+config LED_HNDL1600U
+	tristate "LED for HNDL1600U"
+	depends on  (HNDL_PRODUCT_HNDL1600U)
+	default y
+	
+config BATTERY_HNDL1600U
+	tristate "Battery Management for HNDL1600U"
+	depends on  (HNDL_PRODUCT_HNDL1600U)
+	default y
+	
+config PROC_HNDL1600U
+	tristate "Proc test interfaces for HNDL1600U"
+	depends on  (HNDL_PRODUCT_HNDL1600U)
+	default y
+
+endmenu
+

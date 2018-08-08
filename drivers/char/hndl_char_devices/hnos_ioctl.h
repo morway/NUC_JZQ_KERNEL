@@ -1,0 +1,222 @@
+/*
+ * drivers/char/hndl_char_devices/hnos_ioctl.h 
+ *
+ *
+ * The source code in this file can be freely used, adapted,
+ * and redistributed in source or binary form, so long as an
+ * acknowledgment appears in derived source files.  The citation
+ * should list that the code comes from the book "Linux Device
+ * Drivers" by Alessandro Rubini and Jonathan Corbet, published
+ * by O'Reilly & Associates.   No warranty is attached;
+ * we cannot take responsibility for errors or fitness for use.
+ *
+ */
+#ifndef __HNOS_IOCTL_H 
+#define __HNOS_IOCTL_H 
+
+#include <linux/ioctl.h> 	/* needed for the _IOW etc stuff used later */
+
+/* Ioctl definitions */
+
+/* Use 'c' as magic number */
+#define HNDL_AT91_IOC_MAGIC   'c'
+
+/* LED stuffs */
+#if defined (CONFIG_HNDL_PRODUCT_HNTT1800SSC) \
+        ||defined(CONFIG_HNDL_PRODUCT_HNTT1800ESH)\
+        ||defined(CONFIG_HNDL_PRODUCT_HNTT1800X)\
+        ||defined(CONFIG_HNDL_PRODUCT_HNTT1800SJL)
+#define LED_ON		 0
+#define LED_OFF          1
+#else
+#define LED_ON		 1
+#define LED_OFF          0
+#endif
+
+/* GPIO pin: output level */
+#define OUTPUT_LEVEL_HIGH   1
+#define OUTPUT_LEVEL_LOW    0
+
+#define WORK_LED	 0
+#define METER_LED	 1
+#define NET_LED		 2
+#define RSSI_LED	 3
+
+
+/*hndl1800sSC*/
+#if defined (CONFIG_HNDL_PRODUCT_HNTT1800SSC)
+#define LED_GK	        0
+#define LED_DK	        1
+#define LED_BD	        2
+#define LED_CTRL1       3
+#define LED_CTRL2       4
+#define LED_ALARM	5
+#define LED_NUM         6
+#endif
+
+struct led_blinking_timeout
+{
+	unsigned char led;
+	unsigned long timeout;
+};
+
+/* LED light on / off. */
+#define IOC_LED_ON 		    _IOW(HNDL_AT91_IOC_MAGIC,0, int)
+#define IOC_LED_OFF  	    _IOW(HNDL_AT91_IOC_MAGIC,1, int)
+
+/* Communication modules (GPRS,CDMA and etc) start/reset and power on/off. */
+#define IOC_COMMU_MODULES_TYPE     _IOW(HNDL_AT91_IOC_MAGIC,2, int)
+#define IOC_COMMU_MODULES_START    _IOW(HNDL_AT91_IOC_MAGIC,3, int)
+#define IOC_COMMU_MODULES_RESET    _IOW(HNDL_AT91_IOC_MAGIC,4, int)
+#define IOC_COMMU_MODULES_POWERON  _IOW(HNDL_AT91_IOC_MAGIC,5, int)
+#define IOC_COMMU_MODULES_POWEROFF _IOW(HNDL_AT91_IOC_MAGIC,6, int)
+
+#define IOC_LED_BLINKING_START	    _IOW(HNDL_AT91_IOC_MAGIC,7, int)
+#define IOC_LED_BLINKING_STOP	    _IOW(HNDL_AT91_IOC_MAGIC,8, int)
+
+#define IOC_BLINKING_SET_TIMEOUT 	_IOW(HNDL_AT91_IOC_MAGIC,9, int)
+
+#define IOC_PLC_POWERON 	    _IOW(HNDL_AT91_IOC_MAGIC,10, int)
+#define IOC_PLC_POWEROFF 	    _IOW(HNDL_AT91_IOC_MAGIC,11, int)
+
+#define IOC_INPUT_CHAN_MAX 	    _IOR(HNDL_AT91_IOC_MAGIC,12, int)
+#define IOC_INPUT_STATE_GET     _IOR(HNDL_AT91_IOC_MAGIC,13, int)
+#define IOC_INPUT_ALL_CHAN 	    _IOR(HNDL_AT91_IOC_MAGIC,14, int)
+                                
+#define IOC_OUTPUT_CHAN_MAX	    _IOR(HNDL_AT91_IOC_MAGIC,15, int)
+#define IOC_OUTPUT_CTRL_SET	    _IOW(HNDL_AT91_IOC_MAGIC,16, int)
+#define IOC_OUTPUT_CTRL_CLEAR	_IOW(HNDL_AT91_IOC_MAGIC,17, int)
+#define IOC_OUTPUT_ALL_CHAN	    _IOR(HNDL_AT91_IOC_MAGIC,18, int)
+
+#define IOC_PULSE_CHAN_MAX 	    _IOR(HNDL_AT91_IOC_MAGIC,19, int)
+#define IOC_PULSE_CNT_GET 	    _IOR(HNDL_AT91_IOC_MAGIC,20, int)
+ 
+#define IOC_ANALOG_CHAN_MAX	    _IOR(HNDL_AT91_IOC_MAGIC,21, int)
+#define IOC_DC_ANALOG_GET	    _IOR(HNDL_AT91_IOC_MAGIC,22, int)
+
+#define IOC_PULSE_LEVEL_GET     _IOR(HNDL_AT91_IOC_MAGIC,23, int)//pulse_level
+
+#define IOC_7022_READ           _IOR(HNDL_AT91_IOC_MAGIC,24, int)//pulse_level
+#define IOC_7022_WRITE          _IOW(HNDL_AT91_IOC_MAGIC,25, int)//pulse_level
+#define IOC_7022_HW_RESET       _IOW(HNDL_AT91_IOC_MAGIC,26, int)//pulse_level
+
+
+#define IOC_RELAY_LED_VALUE		    _IOW(HNDL_AT91_IOC_MAGIC,27, int)//写led数据
+#define IOC_RELAY_OUTPUT_ENABLE		_IOW(HNDL_AT91_IOC_MAGIC,28, int)//打开"输出使用"		
+#define IOC_RELAY_OUTPUT_DISABLE	_IOW(HNDL_AT91_IOC_MAGIC,29, int)//关闭"输出使用"
+
+//added by zhangwei
+#define AP89170_IOCTL_POWER_UP      _IOW(HNDL_AT91_IOC_MAGIC,30, int)  
+#define AP89170_IOCTL_POWER_DOWN    _IOW(HNDL_AT91_IOC_MAGIC,31, int)
+#define AP89170_IOCTL_PAUSE         _IOW(HNDL_AT91_IOC_MAGIC,32, int)
+#define AP89170_IOCTL_RESUME        _IOW(HNDL_AT91_IOC_MAGIC,33, int)
+#define AP89170_IOCTL_PLAY          _IOW(HNDL_AT91_IOC_MAGIC,34, int)
+#define AP89170_IOCTL_STATUS        _IOW(HNDL_AT91_IOC_MAGIC,35, int)
+#define AP89170_IOCTL_PREFETCH      _IOW(HNDL_AT91_IOC_MAGIC,36, int)
+#define AP89170_IOCTL_PUP1          _IOW(HNDL_AT91_IOC_MAGIC,37, int)
+#define AP89170_IOCTL_PDN1          _IOW(HNDL_AT91_IOC_MAGIC,38, int)
+//29 to 38 changed by zhangwei
+
+#define IOC_BATTERY_CHARGE          _IOW(HNDL_AT91_IOC_MAGIC,39, int)
+#define IOC_BATTERY_ENABLE          _IOW(HNDL_AT91_IOC_MAGIC,40, int)
+
+#define IOC_PULSE_CNT_CLEAR         _IOW(HNDL_AT91_IOC_MAGIC,41, int)
+
+#define IOCTL_FM1702SL_SPIINIT    	    _IOW(HNDL_AT91_IOC_MAGIC,42, int)
+#define IOCTL_FM1702SL_INIT      		_IOW(HNDL_AT91_IOC_MAGIC,43, int)
+#define IOCTL_FM1702SL_REQUESTALL   	_IOW(HNDL_AT91_IOC_MAGIC,44, int)
+#define IOCTL_FM1702SL_REQUESTIDLE   	_IOW(HNDL_AT91_IOC_MAGIC,45, int)
+#define IOCTL_FM1702SL_GETUID      		_IOW(HNDL_AT91_IOC_MAGIC,46, int)
+#define IOCTL_FM1702SL_SELECTTAG     	_IOW(HNDL_AT91_IOC_MAGIC,47, int)
+#define IOCTL_FM1702SL_WRITEKEYTOE2     _IOW(HNDL_AT91_IOC_MAGIC,48, int)
+#define IOCTL_FM1702SL_LOADKEYE2      	_IOW(HNDL_AT91_IOC_MAGIC,49, int)
+#define IOCTL_FM1702SL_AUTHENTICATIONA  _IOW(HNDL_AT91_IOC_MAGIC,50, int)
+#define IOCTL_FM1702SL_AUTHENTICATIONB  _IOW(HNDL_AT91_IOC_MAGIC,51, int)
+#define IOCTL_FM1702SL_WRITEBLOCK       _IOW(HNDL_AT91_IOC_MAGIC,52, int)
+#define IOCTL_FM1702SL_READBLOCK      	_IOW(HNDL_AT91_IOC_MAGIC,53, int)
+#define IOCTL_FM1702SL_INCREMENT      	_IOW(HNDL_AT91_IOC_MAGIC,54, int)
+#define IOCTL_FM1702SL_DECREMENT      	_IOW(HNDL_AT91_IOC_MAGIC,55, int)
+#define IOCTL_FM1702SL_RESTORE      	_IOW(HNDL_AT91_IOC_MAGIC,56, int)
+#define IOCTL_FM1702SL_TRANSFER      	_IOW(HNDL_AT91_IOC_MAGIC,57, int)
+#define IOCTL_FM1702SL_HALT      		_IOW(HNDL_AT91_IOC_MAGIC,58, int)
+#define IOCTL_FM1702SL_RESET			_IOW(HNDL_AT91_IOC_MAGIC,59, int)
+#define IOCTL_FM1702SL_LOADKEYFIFO		_IOW(HNDL_AT91_IOC_MAGIC,60, int)
+#define IOCTL_FM1702SL_STANDBY		    _IOW(HNDL_AT91_IOC_MAGIC,61, int)
+#define IOCTL_FM1702SL_WAKEUP		    _IOW(HNDL_AT91_IOC_MAGIC,62, int)
+#define IOC_LEDS_ON		                _IOW(HNDL_AT91_IOC_MAGIC,63, int)
+#define IOC_LEDS_OFF		            _IOW(HNDL_AT91_IOC_MAGIC,64, int)
+#define IOCTL_71M6534_RECEIVE		    _IOW(HNDL_AT91_IOC_MAGIC,65, int)
+#define IOCTL_71M6534_SEND		        _IOW(HNDL_AT91_IOC_MAGIC,66, int)
+
+/* 
+ * The following commands had been defined in drivers/char/hndl_char_devices/hnos_flags1800u.h 
+*  Caution: don't delete the macros below! 
+*  */
+
+#if 0
+/* add by dq, IO for PLC */
+//090805 #define IOC_PLC_POWERON     _IOW(HNDL_AT91_IOC_MAGIC, 50, int)
+//090805 #define IOC_PLC_POWEROFF    _IOW(HNDL_AT91_IOC_MAGIC, 51, int)
+#define IOC_PLC_RESET       _IOW(HNDL_AT91_IOC_MAGIC, 52, int)
+#define IOC_PLC_A           _IOW(HNDL_AT91_IOC_MAGIC, 53, int)
+#define IOC_PLC_B           _IOW(HNDL_AT91_IOC_MAGIC, 54, int)
+#define IOC_PLC_C           _IOW(HNDL_AT91_IOC_MAGIC, 55, int)
+
+/* add by dq, IO for BATTERY */
+#define IOC_BATTERY_CHARGE_ENABLE   _IOW(HNDL_AT91_IOC_MAGIC, 60, int)
+#define IOC_BATTERY_CHARGE_DISABLE  _IOW(HNDL_AT91_IOC_MAGIC, 61, int)
+#define IOC_BATTERY_SUPPLY_ENABLE   _IOW(HNDL_AT91_IOC_MAGIC, 62, int)
+#define IOC_BATTERY_SUPPLY_DISABLE  _IOW(HNDL_AT91_IOC_MAGIC, 63, int)
+#define IOC_BATTERY_STATE           _IOR(HNDL_AT91_IOC_MAGIC, 64, int)
+
+/* add by dq, IO for Product IO */
+#define IOC_PIO_BIT0        _IOW(HNDL_AT91_IOC_MAGIC, 70, int)
+#define IOC_PIO_BIT1        _IOW(HNDL_AT91_IOC_MAGIC, 71, int)
+#define IOC_PIO_BIT2        _IOW(HNDL_AT91_IOC_MAGIC, 72, int)
+#define IOC_PIO_BIT3        _IOW(HNDL_AT91_IOC_MAGIC, 73, int)
+#define IOC_PIO_BIT4        _IOW(HNDL_AT91_IOC_MAGIC, 74, int)
+#define IOC_PIO_BIT5        _IOW(HNDL_AT91_IOC_MAGIC, 75, int)
+#define IOC_PIO_BIT6        _IOW(HNDL_AT91_IOC_MAGIC, 76, int)
+#define IOC_PIO_BIT7        _IOW(HNDL_AT91_IOC_MAGIC, 77, int)
+#endif
+
+/*add by zrm for ESAM module*/
+#define IOC_ESAM_COOL_RESET             _IOW(HNDL_AT91_IOC_MAGIC,67, int)
+#define IOC_ESAM_WARM_RESET             _IOW(HNDL_AT91_IOC_MAGIC,68, int)
+#define IOC_ESAM_RELEASE                _IOW(HNDL_AT91_IOC_MAGIC,69, int)
+
+/*add by zrm for voice module*/
+#define IOCTL_VOICE_MODULES_POWERON     _IOW(HNDL_AT91_IOC_MAGIC,70, int)
+#define IOCTL_VOICE_MODULES_POWEROFF    _IOW(HNDL_AT91_IOC_MAGIC,71, int)
+
+/*add by zrm for rtc module*/
+#define IOCTL_DS3231_GET_TEMP           _IOW(HNDL_AT91_IOC_MAGIC,72, int)
+
+/*add by zrm for power module*/
+#define IOC_POWER_STATE     _IOW(HNDL_AT91_IOC_MAGIC,73, int)
+#define IOC_V6513_STATE     _IOW(HNDL_AT91_IOC_MAGIC,74, int)
+#define IOC_VCC5V_STATE     _IOW(HNDL_AT91_IOC_MAGIC,75, int)
+#define IOC_VCC5V_ADC       _IOW(HNDL_AT91_IOC_MAGIC,76, int)
+
+/*add by zrm for relay module*/
+#define IOC_RELAY_START     _IOW(HNDL_AT91_IOC_MAGIC,77, int)
+#define IOC_RELAY_POWER     _IOW(HNDL_AT91_IOC_MAGIC,78, int)
+#define IOC_RELAY_OPEN      _IOW(HNDL_AT91_IOC_MAGIC,79, int)
+#define IOC_RELAY_CLOSE     _IOW(HNDL_AT91_IOC_MAGIC,80, int)
+
+#define SLCD_MSG_SIZE_MAX       25 
+struct  slcd_msg_arg {
+    size_t size;
+    u8 *msg;
+};
+
+#define IOC_SLCD_CMD        _IOW(HNDL_AT91_IOC_MAGIC,81, int)
+
+//add by sethf,2010-3-5
+#define IOC_CTRL_PIN_R      _IOW(HNDL_AT91_IOC_MAGIC,82, int)
+#define IOC_CTRL_PIN_C      _IOW(HNDL_AT91_IOC_MAGIC,83, int)
+#define IOC_CTRL_PIN_S      _IOW(HNDL_AT91_IOC_MAGIC,84, int)
+
+#define HNDL_AT91_IOC_MAXNR 200     //41 to 66 changed by zhangwei
+
+#endif

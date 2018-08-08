@@ -1,0 +1,62 @@
+#
+# Makefile for the HNDL-series device drivers.
+#
+
+#AT91SAM9260 PLATFORM
+
+obj-y += hnos_proc.o
+obj-y += hnos_gpio.o
+obj-y += hnos_led_core.o
+
+obj-$(CONFIG_AT91_TEST) += hnos_test_mode.o
+
+obj-$(CONFIG_AT91_KBD) += hnos_kbd_core.o
+obj-$(CONFIG_COMMU_MODULES) += hnos_commu_core.o
+obj-$(CONFIG_COMMU_GENERIC) += hnos_commu_generic.o
+
+obj-$(CONFIG_AT91_INPUT) += hnos_input_core.o
+obj-$(CONFIG_AT91_OUTPUT) += hnos_output_core.o
+
+obj-$(CONFIG_LED_NETMETER) += hnos_led_netmeter.o
+obj-$(CONFIG_AT91_PROG) += hnos_prog.o
+obj-$(CONFIG_AT91_EVENT) += hnos_meter_event.o
+
+obj-$(CONFIG_AT91_DEBUG) += hnos_debug.o
+
+obj-$(CONFIG_AT91_BATTERY) += hnos_battery.o
+
+obj-$(CONFIG_LCD_UC1698U) += hnos_lcd_cog.o
+obj-$(CONFIG_AT91_AD79X1) += hnos_ad79x1.o
+obj-$(CONFIG_AT91_MCP320X) += hnos_mcp320x.o
+obj-$(CONFIG_AT91_PLC) += hnos_plc.o
+
+obj-$(CONFIG_KBD_METERGATHER) += hnos_kbd_metergather.o
+
+obj-$(CONFIG_KBD_HNTT1800X) += hnos_kbd_hntt1800x.o
+obj-$(CONFIG_LED_HNTT1800X) += hnos_led_hntt1800x.o
+obj-$(CONFIG_INPUT_HNTT1800X) += hnos_input_hntt1800x.o 
+obj-$(CONFIG_CARRIER_HNTT1800X) += hnos_carrier_hntt1800x.o
+
+obj-$(CONFIG_OUTPUT_HNTT1800X) += hnos_output_hntt1800x.o 
+
+obj-$(CONFIG_OUTPUT_NETMETER) += hnos_output_netmeter.o
+
+obj-$(CONFIG_AT91_PULSE) += hnos_pulse_core.o
+obj-$(CONFIG_PULSE_HNTT1800X) += hnos_pulse_measure.o
+
+obj-$(CONFIG_KBD_HNDL900B) += hnos_kbd_hndl900b.o
+obj-$(CONFIG_LED_HNDL900B) += hnos_led_hndl900b.o
+obj-$(CONFIG_INPUT_HNDL900B) += hnos_input_hndl900b.o
+obj-$(CONFIG_OUTPUT_HNDL900B) += hnos_output_hndl900b.o
+
+obj-$(CONFIG_PULSE_HNTT1000X) += hnos_pulse_hntt1000x.o
+obj-$(CONFIG_KBD_HNTT1000X) += hnos_kbd_hntt1000x.o
+obj-$(CONFIG_LED_HNTT1000X) += hnos_led_hntt1000x.o
+obj-$(CONFIG_ATT702X_HNTT1000X) += hnos_att702x_hntt1000x.o
+obj-$(CONFIG_PTCT_HNTT1000X) += hnos_ptct_hntt1000x.o
+
+
+
+
+
+

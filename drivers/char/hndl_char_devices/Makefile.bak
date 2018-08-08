@@ -1,0 +1,152 @@
+#
+# Makefile for the HNDL-series device drivers.
+#
+
+#AT91SAM9260 PLATFORM
+
+obj-$(CONFIG_PROC_INTERFACE) += hnos_proc_intf.o
+obj-$(CONFIG_GPIO_INTERFACE) += hnos_gpio_intf.o
+obj-$(CONFIG_IOMEM_MANAGEMENT) += hnos_iomem_manage.o
+obj-$(CONFIG_HNOS_VERSION) += hnos_version.o
+
+obj-$(CONFIG_PRODUCT_HNTT1800X) += hnos_product_hntt1800x.o
+#obj-$(CONFIG_PRODUCT_HNDL1000X) += hnos_product_hndl1000x.o
+obj-$(CONFIG_PRODUCT_NETMETER) += hnos_product_netmeter.o
+
+#===========================================
+#Common Modules.
+#===========================================
+obj-$(CONFIG_BAT_ADC) += hnos_bat_adc.o
+obj-$(CONFIG_AT91_LED) += hnos_led_core.o
+obj-$(CONFIG_AT91_KBD) += hnos_kbd_core.o
+obj-$(CONFIG_COMMU_MODULES) += hnos_commu_core.o
+obj-$(CONFIG_AT91_INPUT) += hnos_input_core.o
+obj-$(CONFIG_AT91_OUTPUT) += hnos_output_core.o
+obj-$(CONFIG_AT91_DEBUG) += hnos_debug.o
+obj-$(CONFIG_RST_REASON) += hnos_rst_type.o
+obj-$(CONFIG_AT91_TEST)  += hnos_test_mode.o
+obj-$(CONFIG_TTYS2_MODE) += hnos_ttys2_mode.o
+obj-$(CONFIG_PROGRAM_BUTTON) += hnos_prog_interface.o
+obj-$(CONFIG_DC_INTERFACE) += hnos_dc_intf.o
+obj-$(CONFIG_COMMU_GENERIC) += hnos_commu_generic.o
+obj-$(CONFIG_LCD_UC1698U) += hnos_lcd_core.o
+obj-$(CONFIG_AT91_PTCT) += hnos_ptct_core.o
+obj-$(CONFIG_AT91_AP89170) += hnos_ap89170.o
+obj-$(CONFIG_AT91_RTT) += hnos_rtt_timer.o
+obj-$(CONFIG_RELAY_GENERIC) += hnos_relay_core.o
+obj-$(CONFIG_POWER_GENERIC) += hnos_power_core.o
+obj-$(CONFIG_ESAM_GENERIC) += hnos_esam_core.o
+obj-$(CONFIG_HNDL_FKGA43) += hnos_relay_fkga43.o
+#===========================================
+#HNDL800, Netmeter
+#===========================================
+obj-$(CONFIG_LED_NETMETER) += hnos_led_netmeter.o
+obj-$(CONFIG_BATTERY_NETMETER) += hnos_battery_netmeter.o
+obj-$(CONFIG_COMMU_NETMETER) += hnos_commu_netmeter.o
+obj-$(CONFIG_OUTPUT_NETMETER) += hnos_output_netmeter.o
+obj-$(CONFIG_AT91_EVENT) += hnos_meter_event.o
+ifneq ($(CONFIG_HNDL_PRODUCT_NETMETER),)
+obj-m += hnos_gpio_netmeter.o
+endif
+
+#===========================================
+#HNDL-2000ND
+#===========================================
+obj-$(CONFIG_BATTERY_METERGATHER) += hnos_battery_metergather.o
+obj-$(CONFIG_KBD_METERGATHER) += hnos_kbd_metergather.o
+
+#===========================================
+#HNTT1800X
+#===========================================
+obj-$(CONFIG_AT91_AD79X1) += hnos_ad79x1.o
+obj-$(CONFIG_AT91_MCP320X) += hnos_mcp320x.o
+obj-$(CONFIG_BATTERY_HNTT1800X) += hnos_battery_hntt1800x.o
+obj-$(CONFIG_KBD_HNTT1800X) += hnos_kbd_hntt1800x.o
+obj-$(CONFIG_LED_HNTT1800X) += hnos_led_hntt1800x.o
+obj-$(CONFIG_INPUT_HNTT1800X) += hnos_input_hntt1800x.o 
+obj-$(CONFIG_CARRIER_HNTT1800X) += hnos_carrier_hntt1800x.o
+obj-$(CONFIG_OUTPUT_HNTT1800X) += hnos_output_hntt1800x.o 
+obj-$(CONFIG_AT91_PLC) += hnos_plc.o
+obj-$(CONFIG_PULSE_HNTT1800X) += pulse_count.o
+
+obj-$(CONFIG_USART_9BIT) += hnos_usartm9.o
+obj-$(CONFIG_MONITOR_6513) += hnos_mon6513.o
+
+ifneq ($(CONFIG_HNDL_PRODUCT_HNTT1800X),)
+obj-m += hnos_gpio_hntt1800x.o
+endif
+
+#===========================================
+#HNTT1800X
+#===========================================
+obj-$(CONFIG_LCD_HNTT1800U) += hnos_lcd_hntt1800u.o
+obj-$(CONFIG_GPIO_BUS) += hnos_gpio_bus.o
+obj-$(CONFIG_BATTERY_HNTT1800U) += hnos_battery_hntt1800u.o
+obj-$(CONFIG_KBD_HNTT1800U) += hnos_kbd_hntt1800u.o
+obj-$(CONFIG_COMMU_HNTT1800U) += hnos_commu_hntt1800u.o
+obj-$(CONFIG_INPUT_HNTT1800U) += hnos_input_hntt1800u.o
+obj-$(CONFIG_LED_HNTT1800U) += hnos_led_hntt1800u.o
+obj-$(CONFIG_PTCT_HNTT1800U) += hnos_ptct_hntt1800u.o
+obj-$(CONFIG_OUTPUT_HNTT1800U) += hnos_output_hntt1800u.o 
+obj-$(CONFIG_PLC_HNTT1800U) += hnos_plc_core.o hnos_plc_hntt1800u.o
+
+#===========================================
+#HNTT1800SJL
+#===========================================
+## For HNTT1800SJL, we use hnos_kbd_hntt1800x.o as keyboard.
+obj-$(CONFIG_KBD_HNTT1800SJL) += hnos_kbd_hntt1800x.o
+obj-$(CONFIG_INPUT_HNTT1800SJL) += hnos_input_hntt1800sjl.o
+obj-$(CONFIG_OUTPUT_HNTT1800SJL) += hnos_output_hntt1800sjl.o
+obj-$(CONFIG_LED_HNTT1800SJL) += hnos_led_hntt1800sjl.o
+
+ifneq ($(CONFIG_HNDL_PRODUCT_HNTT1800SJL),)
+obj-m += hnos_gpio_hntt1800sjl.o
+endif
+
+#===========================================
+#HNTT1800SSC
+#===========================================
+## For HNTT1800SSC, we use hnos_kbd_hntt1800x.o as keyboard.
+obj-$(CONFIG_KBD_HNTT1800SSC) += hnos_kbd_hntt1800x.o
+obj-$(CONFIG_INPUT_HNTT1800SSC) += hnos_input_hntt1800ssc.o
+obj-$(CONFIG_OUTPUT_HNTT1800SSC) += hnos_output_hntt1800ssc.o
+obj-$(CONFIG_LED_HNTT1800SSC) += hnos_led_hntt1800ssc.o
+obj-$(CONFIG_PULSE_HNTT1800SSC) += hnos_pulse_hntt1800ssc.o
+
+## For HNTT1800SSC, we use hnos_gpio_hntt1800sjl.o .
+##ifneq ($(CONFIG_HNDL_PRODUCT_HNTT1800SSC),)
+##	obj-y += hnos_gpio_hntt1800ssc.o
+##endif
+
+#===========================================
+#HNDL900FJ
+#===========================================
+## For HNDL900FJ, we use hnos_kbd_hntt1800x.o as keyboard.
+obj-$(CONFIG_KBD_HNDL900FJ) += hnos_kbd_hntt1800x.o
+obj-$(CONFIG_INPUT_HNDL900FJ) += hnos_input_hndl900fj.o
+obj-$(CONFIG_OUTPUT_HNDL900FJ) += hnos_output_hndl900fj.o
+obj-$(CONFIG_PULSE_HNDL900FJ) += hnos_pulse_hndl900fj.o
+obj-$(CONFIG_LED_HNDL900FJ) += hnos_led_hndl900fj.o
+
+#===========================================
+#  hndl1000x
+#===========================================
+obj-$(CONFIG_LCD_HNDL1000X) += hnos_lcd_hndl1000x.o
+obj-$(CONFIG_PRODUCT_INFO_HNDL1000X) += hnos_productinfo_hndl1000x.o hnos_product_hndl1000x.o
+obj-$(CONFIG_COMMU_HNDL1000X) += hnos_commu_hndl1000x.o
+obj-$(CONFIG_PULSE_HNDL1000X) += hnos_pulse_hndl1000x.o
+obj-$(CONFIG_INPUT_HNDL1000X) += hnos_input_hndl1000x.o
+obj-$(CONFIG_OUTPUT_HNDL1000X) += hnos_output_hndl1000x.o
+obj-$(CONFIG_KBD_HNDL1000X) += hnos_kbd_hndl1000x.o
+obj-$(CONFIG_LED_HNDL1000X) += hnos_led_hndl1000x.o
+obj-$(CONFIG_RELAY_HNDL1000X) += hnos_relay_hndl1000x.o
+obj-$(CONFIG_TIMER_HNDL1000X) += hnos_timer_hndl1000x.o
+obj-$(CONFIG_BATTERY_HNDL1000X) += hnos_battery_hndl1000x.o
+obj-$(CONFIG_AT91_FM1702SL) += hnos_fm1702sl.o
+obj-$(CONFIG_PTCT_HNDL1000X) += hnos_ptct_hndl1000x.o
+obj-$(CONFIG_ESAM_HNDL1000X) += hnos_esam_hndl1000x.o
+
+obj-$(CONFIG_ATT7022_CALI) += hnos_att7022_cali.o
+hnos_att7022_cali-y := hnos_calibration.o hnos_at24c02.o hnos_att7022.o
+
+

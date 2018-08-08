@@ -1,0 +1,170 @@
+/*
+ *  drivers/char/hndl_char_devices/hnos_gpio_hntt1800x.c
+ *
+ *  The pins not used are initialized to output, low.
+ *
+ *
+ *  This program is free software; you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation; either version 2 of the License, or
+ *  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program; if not, write to the Free Software
+ *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ */
+
+#include "hnos_generic.h"
+
+static  unsigned int __initdata pins_reserved[] =
+{
+	//AT91_PIN_PA0,		/* PA0/SPI0_MISO/MCDB0B, used as SPI0 MISO. */
+	//AT91_PIN_PA1,		/* PA1/SPI0_MOSI/MCCDB, used as SPI0 MOSI. */
+	//AT91_PIN_PA2,		/* PA2/SPI0_SPCK, used as SPI0 SPCK. */
+	//AT91_PIN_PA3,		/* PA3/SPI0_NPCS0/MCDB3, used as SPI0. */
+	
+	AT91_PIN_PA4,           /* PA4/RTS2/MCDB2, NOT CONNECTED. */
+	AT91_PIN_PA5,           /* PA5/CTS5/MCDB1, NOT CONNECTED. */
+
+	//AT91_PIN_PA6,		/* PA6/MCDA0, used as GPRS power control. */
+	//AT91_PIN_PA7,		/* PA7/MCCDA, used as error led. */
+	//AT91_PIN_PA8,		/* PA8/MCCK, remote control power control. */
+	//AT91_PIN_PA9,		/* PA9/MCDA1, hardware watchdog. */
+	//AT91_PIN_PA10,	/* PA10/MCDA2/ETX2, irda/console switch. */
+	//AT91_PIN_PA11,	/* PA11/MCDA3/ETX3, soft reset for GPRS. */
+	//AT91_PIN_PA12,	/* ETX0/ PA12, TDK 6513 state. */
+	//AT91_PIN_PA13,	/* ETX1/ PA13, remote control enable. */
+	//AT91_PIN_PA14,	/* ERX0/PA14, status input 0. */
+	//AT91_PIN_PA15,	/* ERX1/PA15, status input 1. */
+	//AT91_PIN_PA16,	/* ETXEN/PA16, output control 0. */
+	//AT91_PIN_PA17,	/* ERXDV/PA17, PLC power control. */
+	//AT91_PIN_PA18,	/* ERXER/PA18, GPRS start. */
+	//AT91_PIN_PA19,	/* ETXCK/PA19, remote output 0. */
+	//AT91_PIN_PA20,	/* EMDC/PA20, battery charge. */
+	//AT91_PIN_PA21,	/* EMDIO/PA21, battery on/off. */
+	
+	AT91_PIN_PA22,		/* PA22/ADTRG/ETXER, NOT CONNECTED. */
+
+	//AT91_PIN_PA23,	/* ETX2/TWD/PA23, used as TWD. */
+	//AT91_PIN_PA24,	/* EXT3/TWCK/PA24, used as TWCK. */
+	
+	AT91_PIN_PA25,		/* PA25/TCLK0/ERX2, NOT CONNECTED. */
+	AT91_PIN_PA26,		/* PA26/TIOA0/ERX3, NOT CONNECTED. */
+	AT91_PIN_PA27,		/* PA27/TIOA1/ERXCK, NOT CONNECTED. */
+	AT91_PIN_PA28,		/* PA28/TIOA2/ECRS, NOT CONNECTED. */
+	AT91_PIN_PA29,		/* PA29/SCK1/ECOL, NOT CONNECTED. */
+
+	//AT91_PIN_PA30,	/* PA30/SCK2/RXD4, usart4. */
+	//AT91_PIN_PA31,	/* PA31/ADTRG/TXD4, usart4. */
+
+	//AT91_PIN_PB0,		/* PB0/SPI1_MISO/TIOA3, carrier A output. */
+	//AT91_PIN_PB1,		/* PB1/SPI1_MOSI/TIOB3, irda 38hz carrier. */
+	//AT91_PIN_PB2,		/* PB2/SPI1_SPCK/TIOA4, carrier C output. */
+	//AT91_PIN_PB3,		/* PB3/SPI1_NPCS0/TIOA5, carrier B output. */
+	
+	//AT91_PIN_PB4,		/* PB4/TXD0, usart0. */
+	//AT91_PIN_PB5,		/* PB5/RXD0,_usart0. */
+	//AT91_PIN_PB6,		/* PB6/TXD1/TCLK1, usart1. */
+	//AT91_PIN_PB7,		/* PB7/RXD1/TCLK2,_usart1. */
+	//AT91_PIN_PB8,		/* PB8/TXD2, usart2. */
+	//AT91_PIN_PB9,		/* PB9/RXD2,_usart2. */
+	//AT91_PIN_PB10,	/* PB10/TXD3/ISI_D8, usart3. */
+	//AT91_PIN_PB11,	/* PB11/RXD3/ISI_D9,_usart3. */
+	//AT91_PIN_PB12,	/* PB12/TXD5/ISI_D10, usart5. */
+	//AT91_PIN_PB13,	/* PB13/RXD5/ISI_D11,_usart5. */
+	//AT91_PIN_PB14,	/* PB14/DRXD, DBUG. */
+	//AT91_PIN_PB15,	/* PB15/DTXD,_DBUG. */
+
+	//AT91_PIN_PB16,	/* PB16/TCLK3, open cover detect. */
+	//AT91_PIN_PB17,	/* PB17/TCLK4, LCD reset. */
+	//AT91_PIN_PB18,	/* PB18/TIOB4, open glass detect. */
+	//AT91_PIN_PB19,	/* PB19//TIOB4, LCD backlight. */
+	
+	AT91_PIN_PB20,		/* PB20/RK0/ISI_D0, NOT CONNECTED. */
+	AT91_PIN_PB21,		/* PB21/RF0/ISI_D1, NOT CONNECTED. */
+
+	AT91_PIN_PB22,		/* PB22/DSR0, reserved. */
+	AT91_PIN_PB23,		/* PB23/DCD0, reserved. */
+	AT91_PIN_PB24,		/* PB27/DTR0, reserved. */
+	AT91_PIN_PB25,		/* PB25/RI0/ISI_D5, reserved. */
+	AT91_PIN_PB26,		/* PB26/RTS0, reserved */
+	AT91_PIN_PB27,		/* PB27/CTS0, reserved */
+
+	AT91_PIN_PB28,		/* PB28/RTS1, NOT CONNECTED */
+	AT91_PIN_PB29,		/* PB29/CTS1, NOT CONNECTED */
+	AT91_PIN_PB30,		/* PB30/PCK0, NOT CONNECTED */
+	AT91_PIN_PB31,		/* PB31/PCK1, NOT CONNECTED */
+
+	//AT91_PIN_PC0,		/* SCK3/AD0/PC0, ADC for battery voltage. */
+	//AT91_PIN_PC1,		/* PCK0/AD1/PC1, power off state. */
+	//AT91_PIN_PC2,		/* PCK1/AD2/PC2, ADC of VCC 5V. */
+	AT91_PIN_PC3,		/* SPI1_NPCS3/AD3/PC3, reserved */
+
+	//AT91_PIN_PC4,		/* PC4/A23/SPI1_NPCS2, */
+	//AT91_PIN_PC5,		/* PC5/A24/SPI1_NPCS1, */
+	
+	AT91_PIN_PC6,		/* PC6/TIOB2/CFCE1, NOT CONNECTED */
+	AT91_PIN_PC7,		/* PC7/TIOB1/CFCE2, NOT CONNECTED */
+	AT91_PIN_PC8,		/* PC8/NCS4/RTS3, NOT CONNECTED */
+	AT91_PIN_PC9,		/* PC9/NCS5/TIOB0, NOT CONNECTED */
+
+	//AT91_PIN_PC10,	/* PCl0/A25/CTS3 */
+	//AT91_PIN_PC11,	/* PC11/NCS2/SPI0_NPCS1, NCS2 */
+	
+	AT91_PIN_PC12,		/* PC12/IRQ0/NCS7, NOT CONNECTED */
+
+	//AT91_PIN_PC13,	/* PC13/FIQ/NCS6, nand flash ready/busy. */
+	//AT91_PIN_PC14,	/* PC14/NCS3/IRQ2, nand flash CS. */
+	
+	AT91_PIN_PC15,		/* PC15/NWAIT/IRQ1, NOT CONNECTED */
+
+	AT91_PIN_PC16,		/* PC16/D16/SPI0_NPCS2, NOT CONNECTED */
+	AT91_PIN_PC17,		/* PC17/D17/SPI0_NPCS3, NOT CONNECTED */
+	AT91_PIN_PC18,		/* PC18/D18/SPI1_NPCS1, NOT CONNECTED */
+	AT91_PIN_PC19,		/* PC19/D19/SPI1_NPCS2, NOT CONNECTED */
+	AT91_PIN_PC20,		/* PC20/D20/SPI1_NPCS3, NOT CONNECTED */
+	AT91_PIN_PC21,		/* PC21/D21, NOT CONNECTED */
+
+	//AT91_PIN_PC22,	/* PC22/D22, nand flash wp */
+	
+	AT91_PIN_PC23,		/* PC23/D23, NOT CONNECTED */
+	AT91_PIN_PC24,		/* PC24/D24, NOT CONNECTED */
+	AT91_PIN_PC25,		/* PC25/D25, NOT CONNECTED */
+	AT91_PIN_PC26,		/* PC26/D26, NOT CONNECTED */
+	AT91_PIN_PC27,		/* PC27/D27, NOT CONNECTED */
+	AT91_PIN_PC28,		/* PC28/D28, NOT CONNECTED */
+	AT91_PIN_PC29,		/* PC29/D29, NOT CONNECTED */
+	AT91_PIN_PC30,		/* PC30/D30, NOT CONNECTED */
+	AT91_PIN_PC31,		/* PC31/D31, NOT CONNECTED */
+};
+
+/* The pins which marked as "reserved" or "NOT CONNECTED" will both be configured to gpio output low. */
+static int __init pins_reserved_init(void)
+{
+	int i = 0;
+
+	for (i=0; i<ARRAY_SIZE(pins_reserved); i++) {
+		at91_set_gpio_output(pins_reserved[i], 0);
+	}
+
+    HNOS_DEBUG_INFO("Registered the gpio_hntt1800x module.\n");
+	return 0;
+}
+
+static void __exit pins_reserved_exit(void)
+{
+    HNOS_DEBUG_INFO("Unregistered the gpio_hntt1800x module.\n");
+    return;
+}
+
+module_init(pins_reserved_init);
+module_exit(pins_reserved_exit);
+
+MODULE_LICENSE("GPL");
+MODULE_AUTHOR("Liulf");
+

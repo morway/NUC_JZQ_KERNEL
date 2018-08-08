@@ -1,0 +1,433 @@
+/*
+ *  drivers/char/hndl_char_devices/pulse_count.c
+ *
+ *
+ *  This program is free software; you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation; either version 2 of the License, or
+ *  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program; if not, write to the Free Software
+ *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ */
+
+#include <linux/kernel.h> 
+#include <linux/module.h> 
+#include <linux/clk.h> 
+#include <asm/io.h> 
+#include <asm/arch-at91/at91sam9260.h> 
+#include <asm/arch-at91/at91_tc.h> 
+#include <asm/arch-at91/gpio.h> 
+
+#include <linux/types.h>
+#include <linux/init.h>
+#include <linux/version.h>
+#include <linux/spinlock.h>
+#include <linux/interrupt.h>
+#include <linux/platform_device.h>
+#include <linux/cdev.h>
+#include <linux/fs.h>
+#include <linux/ioctl.h>
+#include <linux/poll.h>
+#include <asm/arch/hardware.h>
+#include <asm/arch/at91_adc.h>
+#include <asm/arch/at91_pmc.h>
+#include <linux/ioport.h>
+#include <linux/sched.h>
+#include <linux/delay.h>
+#include <linux/errno.h>
+
+#include "hnos_generic.h"
+#include "hnos_ioctl.h" 
+#include "hnos_proc.h" 
+#include "hnos_gpio.h" 
+#include "hnos_output.h"
+#include "hnos_iomem.h"
+
+#define DEBUG 0
+#define MAXCH 2
+
+#define DEV_NAME "pulse_input"
+#define ENABLE_IRQ    1
+static int minor_num = 0;
+static int major_num = 0;
+static  int  pulse_count[MAXCH]={0};
+
+struct pulse_ops
+{
+    int (*read) (u8 ch, u32 *reslt);
+};
+
+struct device_pulse_input 
+{
+    struct cdev my_cdev;
+};
+
+static struct device_pulse_input *g_my_device;
+static int my_open(struct inode *inode, struct file *filp);
+static int my_release(struct inode *inode, struct file *filp);
+static int pulse_proc_write(struct proc_item *item, const char __user * userbuf,
+                               unsigned long count) ;
+static int pulse_proc_read(struct proc_item *item, char *page);
+
+static struct class *my_class;
+
+static int  gpio_ctl_ioctl(struct inode *inode, struct file *filp,
+                            unsigned int command, unsigned long arg);
+
+struct file_operations my_fops = 
+{
+    .owner = THIS_MODULE,
+    .ioctl = gpio_ctl_ioctl,
+    .open = my_open,
+    .release = my_release,
+};
+
+static struct proc_item items_pulse[] = 
+{
+    [0] = {
+        .name = DEV_NAME, 
+        .read_func = pulse_proc_read,
+        .write_func = pulse_proc_write,
+    },
+};
+//-----------------------处理-----------------------------------------------------------
+#define CHANNEL0			0X00
+#define CHANNEL1			0X40
+#define CHANNEL2			0X80
+//150912000/2 mck : rc=0.001*mck/32=0.001*150912000/2/32=2358 1ms的定时
+//198656000/2 mck : rc=0.001*198656000/2/32=3104    1ms的定时
+
+#define TIMER_COUNTER_MAX_DUTY	2358		/* duty cycle  */ 
+#define TC_PWM_CLKSRC AT91_TC_TIMER_CLOCK3	/* PWM　use TC clock3: MCK/32 */
+
+/* CMR setting for TIOB output.*/
+#define TC_CMR_TIOB  (TC_PWM_CLKSRC | AT91_TC_WAVE | AT91_TC_EEVT_XC0 \
+			 | AT91_TC_WAVESEL_UP_AUTO | AT91_TC_BCPB_TOGGLE | AT91_TC_BCPC_TOGGLE )
+
+
+static void volatile __iomem *tc_base;
+static struct clk *tc_clk;  
+
+unsigned int    irq;
+
+static inline u32 at91_tc_read(unsigned int offset) 
+{ 
+   return __raw_readl(tc_base + offset); 
+} 
+
+static inline void at91_tc_write(unsigned int offset, u32 value) 
+{ 
+   __raw_writel(value, tc_base + offset); 
+} 
+
+static irqreturn_t  timer1_interrupt(int irq, void *dev_id)
+{ 
+	static unsigned int count_h1 = 0, count_h2 = 0;
+	static unsigned int count_l1 = 0, count_l2 = 0;
+	static bool h1Flag = false, h2Flag = false, l1Flag = false, l2Flag = false;
+
+	//------------------第一路脉冲------------------------------	  
+  	if(at91_get_gpio_value(AT91_PIN_PB2))
+  	{
+  		if(count_h1 > 15)
+  		{
+  			if(h1Flag == false)
+  			{
+  				h1Flag = true;
+  			
+  				count_l1 = 0;
+  				l1Flag = false;
+  			}
+  		}
+ 
+   		count_h1++;
+  	}
+	else
+  	{  	
+   		count_l1++;	
+   	
+   		// 脉冲宽度80±20ms            
+    	if(count_l1 > 55)
+    	{
+    		if(l1Flag == false)
+    		{
+	    		l1Flag = true;
+	    		count_l1 = 0;
+	    	}
+	    }
+    
+	    // 先检测到高电平大于15ms，再检测到低电平大于55ms，
+	    // 并且处于检测到低电平状态，脉冲计1次数
+	    // 清除相关计数器及标志
+	  	if((h1Flag == true) && (l1Flag == true))
+	    {
+	    	count_h1 = 0;
+	    	count_l1 = 0;
+	    	
+	    	h1Flag = false;
+	    	l1Flag = false;
+	    	pulse_count[0]++;                     
+	    }
+		}
+
+		//------------------第二路脉冲------------------------------	
+	  if(at91_get_gpio_value(AT91_PIN_PB3))
+	  {
+	  	if(count_h2 > 15)
+	  	{
+	  		if(h2Flag == false)
+	  		{
+	  			h2Flag = true;
+	  			
+	  			count_l2 = 0;
+	  			l2Flag = false;
+	  		}
+	  	}
+	 
+	   	count_h2++;
+	  }else
+	  {  	
+	   	count_l2++;	
+	   	
+	   	// 脉冲宽度80±20ms            
+	    if(count_l2 > 55)
+	    {
+	    	if(l2Flag == false)
+	    	{
+	    		l2Flag = true;
+	    		count_l2 = 0;
+	    	}
+	    }
+	    
+	    // 先检测到高电平大于15ms，再检测到低电平大于55ms，
+	    // 并且处于检测到低电平状态，脉冲计1次数
+	    // 清除相关计数器及标志
+	  	if((h2Flag == true) && (l2Flag == true))
+	    {
+	    	count_h2 = 0;
+	    	count_l2 = 0;
+	    	
+	    	h2Flag = false;
+	    	l2Flag = false;
+	    	pulse_count[1]++;                     
+	    }
+	}
+
+	at91_tc_read(AT91_TC_SR + CHANNEL1); 
+	return  IRQ_HANDLED;
+}
+
+static void  pulse_start(void) 
+{   
+   	at91_set_B_periph(AT91_PIN_PC7, 0); 
+
+   	tc_clk = clk_get(NULL, "tc1_clk"); 
+   	clk_enable(tc_clk); 
+
+   	tc_base = ioremap(AT91SAM9260_BASE_TC0, 0xFC); 
+   	if(!tc_base){ 
+      	printk("ioremap ERROR\n"); 
+      	goto unmap; 
+   	} 
+  	at91_sys_write(AT91_PMC_PCER, 1 << AT91SAM9260_ID_TC1);
+  	at91_tc_write(AT91_TC_IDR + CHANNEL1, 0xFF); 	// disable the  interrupt
+  
+   	at91_tc_write(AT91_TC_CCR + CHANNEL1, 			// channel control Reg
+                  AT91_TC_CLKDIS); 					// counter clock disable command
+
+   	at91_tc_write(AT91_TC_BMR,        				// tc block mode reg,external clock signal 0,1,2 not selection
+            	  AT91_TC_TC0XC0S_NONE | 
+            	  AT91_TC_TC1XC1S_NONE | 
+            	  AT91_TC_TC2XC2S_NONE); 
+
+   	at91_tc_write(AT91_TC_CMR + CHANNEL1, TC_CMR_TIOB); // channel mode  reg
+
+   	wmb(); //保证指令执行的顺序
+
+   	at91_tc_write(AT91_TC_RC + CHANNEL1, TIMER_COUNTER_MAX_DUTY); 
+   	at91_tc_write(AT91_TC_IER + CHANNEL1, AT91_TC_CPCS | AT91_TC_CPBS);
+   
+  	at91_sys_write(AT91_AIC_IECR, 1 << AT91SAM9260_ID_TC1); 
+   
+   	wmb(); 
+
+	/* Enable TC */ 
+    //printk("start 1KHZ ....\n"); 
+   	at91_tc_write(AT91_TC_CCR + CHANNEL1, AT91_TC_SWTRG | AT91_TC_CLKEN); 
+  
+unmap: 
+   	return ; 
+}  			
+			
+static void pulse_stop(void) 
+{ 
+   	at91_tc_write(AT91_TC_CCR + CHANNEL1, AT91_TC_CLKDIS); 
+
+   	wmb(); 
+
+   	clk_disable(tc_clk); 
+   	clk_put(tc_clk); 
+  	// printk("stop 1k ....\n"); 
+   	iounmap(tc_base);    
+} 
+
+//-----------------------处理结束------------------------------------------------------------
+static int pulse_proc_write(struct proc_item *item, const char __user * userbuf,
+                               unsigned long count) 
+{
+  	return 0;
+}
+
+static int pulse_proc_read(struct proc_item *item, char *page)
+{
+    int cnt = 0;
+    
+    if(strcmp(item->name, "pulse_input") == 0) 
+    {
+    	cnt += sprintf(page + cnt, "%s\t%d\n", "pulse0:", pulse_count[0]);  
+        cnt += sprintf(page + cnt, "%s\t%d\n", "pulse1:", pulse_count[1]);  
+    } 
+
+    return cnt;
+}
+
+
+static int gpio_ctl_ioctl(struct inode *inode, struct file *filp,
+                           unsigned int cmd, unsigned long arg)
+{           
+	switch(cmd)
+	{
+    	case ENABLE_IRQ:               
+        	break;
+	            
+        default:
+        	printk("Unknow cmd\n");
+    }
+	
+ 	return 0;
+}
+
+static int my_open(struct inode *inode, struct file *filp)
+{    
+    struct device_pulse_input *my_device;
+    my_device = container_of(inode->i_cdev, struct device_pulse_input, my_cdev);
+    filp->private_data = my_device;
+
+	return 0;
+}
+
+static int my_release(struct inode *inode, struct file *filp)
+{
+    return 0;
+}
+
+void __exit my_device_exit(void)
+{
+    dev_t dev_num = MKDEV(major_num, minor_num);   
+    pulse_stop();
+   	if(g_my_device)
+   	{
+       	cdev_del(&(g_my_device->my_cdev));
+       	kfree(g_my_device);
+       	g_my_device = NULL;
+    }
+	
+	//------------------------
+    if(my_class)
+	{
+    	printk("class_device_destroy...\n");
+        class_device_destroy(my_class, dev_num);
+        class_destroy(my_class);
+    }
+       
+    hnos_proc_items_remove(items_pulse, ARRAY_SIZE(items_pulse));
+
+	//------------------------------------------
+    unregister_chrdev_region(dev_num, 1); 
+    
+   	free_irq(irq, NULL);
+   
+    HNOS_DEBUG_INFO("Pulse_device_exit: exit sucess!\n");
+ return;
+}
+
+static int __init my_device_init(void)
+{    	  
+    dev_t dev_num = 0;
+    int res;
+    int err;
+    
+    at91_set_gpio_input(AT91_PIN_PA1, 1);
+    at91_set_gpio_input(AT91_PIN_PA3, 1);
+         
+ 	//printk("my_device_init, alloc_chrdev_region...\n");
+    res = alloc_chrdev_region(&dev_num, minor_num, 1, DEV_NAME);   
+    major_num = MAJOR(dev_num);   
+    if(res < 0)
+    {
+        printk("alloc_chrdev_region error!\n");
+        return -1;
+    }
+  
+    my_class = class_create(THIS_MODULE, DEV_NAME);
+      
+    if(IS_ERR(my_class)) 
+	{
+        printk("Err: failed in creating class.\n");
+        return -1;
+    }
+   
+    class_device_create(my_class, NULL, dev_num, NULL, DEV_NAME);
+        
+    g_my_device= kmalloc(sizeof(struct device_pulse_input), GFP_KERNEL);
+    memset(g_my_device, 0, sizeof(struct device_pulse_input));
+    cdev_init(&(g_my_device->my_cdev), &my_fops);
+    g_my_device->my_cdev.owner = THIS_MODULE;
+    g_my_device->my_cdev.ops = &my_fops;
+    
+    err = cdev_add(&(g_my_device->my_cdev), dev_num, 1);
+     
+    if(err != 0)
+    {
+    	printk("cdev_add error!\n");
+        goto release_g_my_device;
+    }
+
+    printk("request_irq...\n");
+    irq = AT91SAM9260_ID_TC1;
+    if(request_irq(irq, timer1_interrupt, SA_INTERRUPT, DEV_NAME, NULL))
+    {
+    	printk(KERN_ERR"%s: request irq failed\n", __FILE__);
+         
+        goto request_irq_err ;
+    } 
+   
+    //printk("hnos_proc_items_create...\n");
+    hnos_proc_items_create(items_pulse, ARRAY_SIZE(items_pulse));
+      
+    pulse_start();
+
+    HNOS_DEBUG_INFO("Initialized device %s, major %d.\n", DEV_NAME, major_num);
+    return 0; 
+
+request_irq_err:
+   	cdev_del(&(g_my_device->my_cdev));
+release_g_my_device: 	           
+   	kfree(g_my_device);
+   	g_my_device = NULL;
+    
+    return -1;
+}
+
+module_init(my_device_init);
+module_exit(my_device_exit);
+
+MODULE_LICENSE("Dual BSD/GPL");
+

@@ -1,0 +1,265 @@
+/*
+ *  drivers/char/hndl_char_devices/hnos_rmi_hntt1800x.c
+ *
+ *  ReMote Input interface for HNTT1800S Fujian/ HNTT1800F V3.0/ HNTT1800ND V3.0
+ *
+ *
+ *  This program is free software; you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation; either version 2 of the License, or
+ *  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program; if not, write to the Free Software
+ *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ */
+
+#include "hnos_generic.h"
+#include "hnos_ioctl.h" 
+#include "hnos_proc.h" 
+#include "hnos_gpio.h" 
+#include "hnos_input.h"
+#include "hnos_hntt1800x.h"
+
+#define SMCBUS_INPUT_BASE0	UL(0x300000C0)
+#define SMCBUS_INPUT_BASE1	UL(0x300000E0)
+
+static void __iomem *bases[NR_SMCBUS];
+static struct hndl_rmi_device *rmi_hntt1800x;
+static struct smcbus_rmi_data smcbus_hntt1800x;
+
+static struct proc_item items_hntt1800x[] = 
+{
+	{
+		.name = "input0", 
+		.pin = AT91_PIN_PB26,
+		.settings = GPIO_PULLUP, /* input, pullup */
+		.read_func = hnos_proc_gpio_get,
+	},
+	{
+		.name = "input1", 
+		.pin = AT91_PIN_PB27,
+		.settings = GPIO_PULLUP, /* input, pullup */
+		.read_func = hnos_proc_gpio_get,
+	},	
+	{
+		.name = "input2", 
+		.pin = AT91_PIN_PC0,
+		.settings = GPIO_PULLUP, /* input, pullup */
+		.read_func = hnos_proc_gpio_get,
+	},
+	{
+		.name = "input3", 
+		.pin = AT91_PIN_PB21,
+		.settings = GPIO_PULLUP, /* input, pullup */
+		.read_func = hnos_proc_gpio_get,
+	},		
+	{
+		.name = "opencover_state", 
+		.pin = AT91_PIN_PB25,
+		.settings = GPIO_PULLUP, /* input, pullup */
+		.read_func = hnos_proc_gpio_get,
+	},
+		
+};
+
+static struct gpio_rmi_data gpio_hntt1800x =
+{
+	.items = items_hntt1800x,
+	.size = ARRAY_SIZE(items_hntt1800x),
+};
+
+static void  gpio_channel_remove(void)
+{
+	rmi_gpio_unregister(rmi_hntt1800x, &gpio_hntt1800x);
+	return;
+}
+
+static int gpio_channel_init(void)
+{
+	u8 offset = 0;
+	u8 size = ARRAY_SIZE(items_hntt1800x);
+
+	return rmi_gpio_register(rmi_hntt1800x, &gpio_hntt1800x, offset, size);
+}
+
+static int smcbus_read_all(struct smcbus_rmi_data *bus, u32 *reslt)
+{
+	u8 ch0 = 0, ch1 = 0;
+
+	ch0 = readb(bases[0]);
+	ch1 = readb(bases[1]);
+
+	dprintk("%s: ch0 %2x, ch1 %2x\n", __FUNCTION__, ch0, ch1);
+	*reslt = ( ( ch1 << 8 ) | ch0 );
+	return 0;
+}
+
+static int smcbus_read_channel(struct smcbus_rmi_data *bus, u8 ch, u32 *reslt)
+{
+	u8 shift = 0;
+	u8 index = 0;
+	u8 mask = (1 << 0);
+	u8 data = 0;
+	void __iomem *base;
+	u8 smcbus_ch = 0;
+	u8 smcbus_off = rmi_get_smcbus_offset(rmi_hntt1800x);
+
+	if ((ch >= (smcbus_off + NR_SMCBUS * NCHANNEL_PER_SMCBUS))) {
+		printk("%s: Invalid channel %d.\n", __FUNCTION__, ch);
+		return -EFAULT;
+	}
+
+	smcbus_ch = ch - smcbus_off;
+	index = smcbus_ch / NCHANNEL_PER_SMCBUS;
+	shift = smcbus_ch % NCHANNEL_PER_SMCBUS;
+
+	base = bases[index];
+	mask = (1 << shift);
+	data = readb(base);
+
+	dprintk("%s: ch %d, data %x, smcbus_ch %d, index %d, shift %d.\n", __FUNCTION__
+			, ch, data, smcbus_ch, index, shift);
+
+	data = (data & mask ) >> shift ;
+	*reslt = data;
+	return 0;
+}
+
+static int smcbus_read(struct smcbus_rmi_data *bus, u8 ch, u32 *reslt)
+{
+	int ret = 0;
+
+	if (SMCBUS_CHAN_ALL == ch) {
+		ret = smcbus_read_all(bus, reslt);
+	} else {
+		ret = smcbus_read_channel(bus, ch, reslt);
+	}
+
+	dprintk("%s: reslt %x.\n", __FUNCTION__, *reslt);
+	return ret;
+}
+
+static int smcbus_proc_read(struct smcbus_rmi_data *bus, char *buf)
+{
+	int len = 0, ret = 0;
+	u32 reslt = 0;
+	ret = smcbus_read_all(bus, &reslt);
+
+	dprintk("%s: %x.\n", __FUNCTION__, reslt);
+	len = sprintf(buf + len, "%4x\n", reslt);
+	return len;
+}
+
+static void  smcbus_channel_remove(void)
+{
+	rmi_smcbus_unregister(rmi_hntt1800x, &smcbus_hntt1800x);
+	iounmap(bases[1]);
+	release_mem_region(SMCBUS_INPUT_BASE1, 1);
+	iounmap(bases[0]);
+	release_mem_region(SMCBUS_INPUT_BASE0, 1);
+
+	return;
+
+}
+
+static int __devinit smcbus_channel_init(void)
+{
+	int reslt = -1;
+
+	if (!request_mem_region(SMCBUS_INPUT_BASE0, 1, "smcbus_base0")) {
+		printk("%s: request mem region error.\n", __FUNCTION__);
+		reslt = -1;
+		goto base0_request_failed;
+	}
+
+	bases[0] = ioremap(SMCBUS_INPUT_BASE0, 1);
+	if (!bases[0]) {
+		printk(KERN_ERR "Can NOT remap address 0x%08x\n", (unsigned int)SMCBUS_INPUT_BASE0);
+		reslt = -1;
+		goto base0_map_failed;
+	}
+
+	if (!request_mem_region(SMCBUS_INPUT_BASE1, 1, "smcbus_base1")) {
+		printk("%s: request mem region error.\n", __FUNCTION__);
+		reslt = -1;
+		goto base1_request_failed;
+	}
+
+	bases[1] = ioremap(SMCBUS_INPUT_BASE1, 1);
+	if (!bases[1]) {
+		printk(KERN_ERR "Can NOT remap address 0x%08x\n", (unsigned int)SMCBUS_INPUT_BASE1);
+		reslt = -1;
+		goto base1_map_failed;
+	}
+
+	smcbus_hntt1800x.read = smcbus_read;
+	smcbus_hntt1800x.proc_read = smcbus_proc_read;
+	reslt = rmi_smcbus_register(rmi_hntt1800x, &smcbus_hntt1800x, 
+				INPUT_SMCBUS_OFFSET, INPUT_SMCBUS_SIZE);
+	if (reslt < 0) {
+		goto smcbus_failed;
+	}
+	return reslt;
+
+smcbus_failed:
+	iounmap(bases[1]);
+base1_map_failed:
+	release_mem_region(SMCBUS_INPUT_BASE1, 1);
+base1_request_failed:
+	iounmap(bases[0]);
+base0_map_failed:
+	release_mem_region(SMCBUS_INPUT_BASE0, 1);
+base0_request_failed:
+	return reslt;
+}
+
+
+static int __devinit rmi_hntt1800x_init(void)
+{
+/*	u32 expected = PRODUCT_ID_MASK_ALL &
+		(~PRODUCT_HNTT1800S_JL);
+*/
+	rmi_hntt1800x = rmi_device_alloc();
+	if (!rmi_hntt1800x) {
+		return -1;
+	}
+
+	gpio_channel_init();
+//	if ( ID_MATCHED == hntt1800x_id_match(expected) ) {
+//		smcbus_channel_init();
+//	}
+
+    HNOS_DEBUG_INFO("RMI hntt1800x module init.\n");
+	return rmi_device_register(rmi_hntt1800x);
+}
+
+static void rmi_hntt1800x_remove(void)
+{
+/*	u32 expected = PRODUCT_ID_MASK_ALL &
+		(~PRODUCT_HNTT1800S_JL);
+*/
+	gpio_channel_remove();
+//	if ( ID_MATCHED == hntt1800x_id_match(expected) ) {
+//		smcbus_channel_remove();
+//	}
+
+	rmi_device_unregister(rmi_hntt1800x);
+	rmi_device_free(rmi_hntt1800x);
+
+    HNOS_DEBUG_INFO("RMI hntt1800x module exit.\n");
+	return;
+}
+
+
+module_init(rmi_hntt1800x_init);
+module_exit(rmi_hntt1800x_remove);
+
+MODULE_LICENSE("Dual BSD/GPL");
+
+
